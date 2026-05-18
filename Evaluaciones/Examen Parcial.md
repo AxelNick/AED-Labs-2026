@@ -138,21 +138,21 @@ Un RootishArrayStack usa bloques de tamaños $1, 2, 3, \dots, r$. Con $r$ bloque
 
 a) [0.5 pts] Para $r = 5$, dibuje los bloques y ubique los índices lógicos 0 a 14.
 
-La estructura divide la memoria en bloques separados, donde el bloque $b$ tiene capacidad $b+1$.Bloque 0 : [ 0 ] -> tiene capacidad para 1 
-Bloque 1 : [ 1,2 ] -> tiene capacidad para 2 
-Bloque 2 : [ 3,4,5 ] -> tiene capacidad para 3
-Bloque 3 : [ 6,7,8,9 ] -> tiene capacidad para 4
-Bloque 4 : [ 10,11,12,13,14 ] -> tiene capacidad para 5
+La estructura divide la memoria en bloques separados, donde el bloque $b$ tiene capacidad $b+1$
+- Bloque 0 : [ 0 ] -> tiene capacidad para 1 
+- Bloque 1 : [ 1,2 ] -> tiene capacidad para 2 
+- Bloque 2 : [ 3,4,5 ] -> tiene capacidad para 3
+- Bloque 3 : [ 6,7,8,9 ] -> tiene capacidad para 4
+- Bloque 4 : [ 10,11,12,13,14 ] -> tiene capacidad para 5
 
 b) [0.6 pts] Para los índices $i = 0, 1, 2, 5, 9, 14$, indique el bloque y el desplazamiento dentro del bloque.
 
-i = 0  -> Bloque 0, Desplazamiento 0
-i = 1  -> Bloque 1, Desplazamiento 0
-i = 2  -> Bloque 1, Desplazamiento 1
-i = 5  -> Bloque 2, Desplazamiento 2
-i = 9  -> Bloque 3, Desplazamiento 3
-i = 14 -> Bloque 4, Desplazamiento 4
-
+- i = 0  -> Bloque 0, Desplazamiento 0
+- i = 1  -> Bloque 1, Desplazamiento 0
+- i = 2  -> Bloque 1, Desplazamiento 1
+- i = 5  -> Bloque 2, Desplazamiento 2
+- i = 9  -> Bloque 3, Desplazamiento 3
+- i = 14 -> Bloque 4, Desplazamiento 4
 
 c) [0.5 pts] Explique por qué se necesita una función i2b(i) o locate(i).
 
@@ -161,7 +161,6 @@ Como los bloques tienen distinto tamaño y están separados en memoria, no podem
 d) [0.5 pts] Justifique por qué el espacio desperdiciado es $\mathcal{O}(\sqrt{n})$ cuando hay $n$ elementos.
 
 El único espacio vacío está en el último bloque asignado. Si hay $r$ bloques, sabemos que $n \approx r^2 / 2$, por lo que despejando, la cantidad de bloques es $r \approx \sqrt{2n}$. Como el último bloque mide exactamente $r$, el número de celdas vacías es directamente proporcional a $\sqrt{n}$.
-
 
 e) [0.5 pts] Compare el acceso por índice con ArrayStack. ¿Qué se conserva y qué costo adicional aparece?
 
@@ -182,14 +181,13 @@ Inicialmente: front = [30, 20, 10] y back = [40, 50, 60, 70]. Por tanto, la secu
 a) [0.6 pts] Muestre cómo se calcula get(i) para $i = 0, 2, 3, 6$.
 
 Como sabemos que el tamaño de front es f = 3:
-Si i < f, se busca en front[f - i - 1]
-Si i >=  f, se busca en back[i - f]
+* Si i < f, se busca en front[f - i - 1]
+* Si i >=  f, se busca en back[i - f]
 
-i = 0: (0 < 3)  -> front[3 - 0 - 1] = front[2] = 10
-i = 2: (2 < 3)  -> front[3 - 2 - 1] = front[0] = 30
-i = 3: (3 >= 3) -> back[3 - 3] = back[0] = 40
-i = 6: (6 >= 3) -> back[6 - 3] = back[3] = 70
-
+- i = 0: (0 < 3)  -> front[3 - 0 - 1] = front[2] = 10
+- i = 2: (2 < 3)  -> front[3 - 2 - 1] = front[0] = 30
+- i = 3: (3 >= 3) -> back[3 - 3] = back[0] = 40
+- i = 6: (6 >= 3) -> back[6 - 3] = back[3] = 70
 
 b) [0.6 pts] Ejecute add(1, 15) y add(6, 55) indicando en cuál arreglo se inserta y cómo cambia la representación.
 
