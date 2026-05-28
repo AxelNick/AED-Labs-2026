@@ -502,3 +502,157 @@ Porque la matemática detrás de `succ()` está diseñada para seguir estrictame
 
 ### 17. Explica qué aporta asciiArt() para depuración y sustentación.
 Genera un diagrama visual del árbol en la terminal. Esto es invaluable para depurar, ya que permite comprobar a simple vista si las ramas están del lado correcto y si la geometría del árbol tiene sentido, en lugar de intentar adivinar la forma leyendo una lista plana de números.
+
+## Bloque 7 - Árbol binario de búsqueda: búsqueda, eliminación y rotaciones
+
+Revisamos:
+
+* `Semana5/include/BinarySearchTree.h`
+* `Semana5/demos/demo_bst.cpp`
+* `Semana5/pruebas_publicas/test_public_week5.cpp`
+* `Semana5/pruebas_internas/test_internal_week5.cpp`
+
+
+### 1. Define formalmente la propiedad BST.
+Para cualquier nodo del árbol, todos los valores almacenados en su subárbol izquierdo son estrictamente menores que él, y todos los valores en su subárbol derecho son estrictamente mayores.
+
+### 2. Explica por qué el recorrido inorden de un BST debe producir una secuencia no decreciente.
+Porque el inorden lee la estructura siguiendo el patrón **Izquierda, Centro, Derecha**. Como en el BST los menores ya se ubican a la izquierda y los mayores a la derecha, este recorrido extrae de forma natural los datos de menor a mayor.
+
+### 3. Explica la diferencia entre `find`, `findEQ`, `lowerBound` y `upperBound`.
+- **`findEQ`**: Busca una coincidencia exacta. Si el elemento no existe, devuelve nulo.
+- **`lowerBound`**: Devuelve el primer valor mayor o igual al elemento buscado.
+- **`upperBound`**: Devuelve el primer valor estrictamente mayor al elemento buscado.
+- **`find`**: En esta librería en particular, actúa simplemente como un alias de `lowerBound`.
+
+### 4. Explica por qué `findEQ(x)` puede fallar aunque `lowerBound(x)` no falle.
+Si se busca un número que no fue insertado (por ejemplo, el 9), `findEQ` fracasa debido a que requiere ese número exacto. En cambio, `lowerBound` es tolerante: si no encuentra el 9, devuelve el "techo" más cercano que sí exista (por ejemplo, un 10).
+
+### 5. Construye manualmente el BST que se obtiene al insertar: 7, 3, 10, 1, 5, 8, 12, 4, 6.
+```
+        7
+      /   \
+     3     10
+    / \   /  \
+   1   5 8   12
+      / \
+     4   6
+```
+
+### 6. Escribe el inorden, preorden, postorden y recorrido por niveles de ese árbol.
+* **Inorden:** 1, 3, 4, 5, 6, 7, 8, 10, 12
+* **Preorden:** 7, 3, 1, 5, 4, 6, 10, 8, 12
+* **Postorden:** 1, 4, 6, 5, 3, 8, 12, 10, 7
+* **Niveles:** 7, 3, 10, 1, 5, 8, 12, 4, 6
+
+### 7. Simula `lowerBound(9)` y `upperBound(8)` paso a paso.
+* **`lowerBound(9)`**: Se llega a 7 (se avanza a la derecha). Se llega a 10 (es mayor, se guarda como candidato y se avanza a la izquierda). Se llega a 8 (es menor, se avanza a la derecha). Se llega a nulo. Se retorna el último candidato guardado: **10**.
+* **`upperBound(8)`**: Se llega a 7 (se avanza a la derecha). Se llega a 10 (es mayor, se guarda como candidato y se avanza a la izquierda). Se llega a 8 (es igual, pero como es `upperBound` se requiere algo estrictamente mayor, por lo que se avanza a la derecha). Se llega a nulo. Se retorna el candidato: **10**.
+
+### 8. Explica qué casos de eliminación existen en un BST: hoja, un hijo, dos hijos.
+* **Hoja**: Se borra directamente, haciendo que su padre pase a apuntar a nulo.
+* **Un hijo**: Se puentea el nodo. El padre de este pasa a apuntar directamente a su único nieto.
+* **Dos hijos**: El nodo no se borra. Se busca su sucesor inorden, se copia el valor de dicho sucesor al nodo actual y luego se elimina el sucesor original (el cual a lo sumo posee un hijo).
+
+### 9. Explica qué papel cumple `splice` durante una eliminación.
+Es la función responsable de realizar el "puenteo". Desconecta físicamente un nodo del árbol al enlazar directamente al padre de ese nodo con su hijo (si lo tiene), actualizando además el conteo y las alturas.
+
+### 10. Después de eliminar una clave, ¿qué invariantes deben seguir siendo ciertos?
+La regla de menores a la izquierda y mayores a la derecha (propiedad BST), la integridad de los enlaces bidireccionales (los punteros `parent`), y el tamaño y altura actualizados.
+
+### 11. Explica por qué `remove(3)` en las pruebas debe conservar el inorden ordenado.
+Porque el algoritmo de eliminación está diseñado específicamente para reacomodar los enlaces o sustituir valores sin romper la topología geométrica que separa menores de mayores. Si no se quiebra la regla base, el inorden sigue resultando ordenado.
+
+### 12. Explica qué hace `rotateLeft`.
+Toma un nodo y a su hijo derecho. Eleva al hijo derecho para que sea el nuevo padre, mientras que el nodo original es empujado hacia abajo para convertirse en su nuevo hijo izquierdo, reacomodando las ramas internas.
+
+### 13. Explica qué hace `rotateRight`.
+Es el movimiento inverso: eleva al hijo izquierdo para que tome el puesto local de la raíz y empuja al padre original hacia abajo, convirtiéndolo en su nuevo hijo derecho.
+
+### 14. Demuestra que una rotación local preserva la propiedad BST.
+Si se considera un nodo A con un hijo izquierdo B, se sabe que B < A. Al aplicar `rotateRight`, B sube y A baja a ser su hijo derecho. En esta nueva disposición, A queda a la derecha de B, lo que significa que A > B. Al ser matemáticamente la misma relación, el orden se mantiene intacto.
+
+### 15. Explica para qué sirve construir un BST balanceado desde un arreglo ordenado.
+Sirve para forzar que el árbol quede perfectamente simétrico, con la menor altura posible. Esto previene que la estructura se deforme en una línea recta y asegura que las búsquedas futuras sean óptimas.
+
+### 16. Compara el costo de búsqueda en un BST balanceado y en un BST degenerado.
+* **Balanceado**: Tiene un costo de $O(\log n)$. Resulta muy eficiente debido a que cada vez que se baja un nivel, se descarta la mitad de los datos.
+* **Degenerado**: Tiene un costo de $O(n)$. Resulta ineficiente porque, al adoptar la forma de una lista enlazada, se requiere revisar elemento por elemento hasta llegar al final.
+
+
+## Bloque 8 - Heap binario y representación implícita
+
+Revisamos :
+
+* `Semana5/include/BinaryHeap.h`
+* `Semana5/demos/demo_heap.cpp`
+* `Semana5/pruebas_publicas/test_public_week5.cpp`
+* `Semana5/pruebas_internas/test_internal_week5.cpp`
+
+
+### 1. Explica por qué un heap binario puede almacenarse en un std::vector sin punteros.
+Porque es un árbol binario completo (se llena estrictamente por niveles, de izquierda a derecha). Al carecer de "huecos", la posición geométrica de cada nodo se mapea directamente a un índice consecutivo dentro de un arreglo.
+
+### 2. Demuestra las fórmulas de índices.
+Si se ubica la raíz en el índice 0, sus hijos quedan en 1 y 2. Los hijos del 1 quedan en 3 y 4. Siguiendo este patrón:
+* `left(i) = 2*i + 1` (desplaza el nivel y añade el lado izquierdo).
+* `right(i) = 2*i + 2` (el lado derecho es el izquierdo más uno).
+* `parent(i) = (i - 1) / 2` (al despejar `i` y truncar los decimales en la división entera, se obtiene el padre exacto).
+
+### 3. Define la propiedad de min-heap.
+Es una regla estricta de prioridad: el valor de cualquier nodo siempre debe ser menor o igual al valor de sus dos hijos.
+
+### 4. Explica por qué top() devuelve el mínimo.
+Porque al aplicar la propiedad de min-heap en cadena desde las hojas hacia arriba, el número más pequeño de todos es empujado invariablemente hasta la posición más alta: la raíz (índice 0).
+
+### 5. Explica paso a paso cómo bubbleUp(i) restaura la propiedad tras insertar.
+1. El nuevo elemento se inserta al final del arreglo.
+2. Se compara con su padre directo.
+3. Si el nuevo elemento es menor, intercambian lugares (burbujea hacia arriba).
+4. El ciclo se repite hasta que el elemento sea mayor que su nuevo padre o alcance la raíz.
+
+### 6. Explica paso a paso cómo trickleDown(i) restaura la propiedad tras eliminar.
+1. Se toma el nodo actual y se evalúan sus hijos.
+2. Se identifica cuál de los tres tiene el valor más pequeño.
+3. Si un hijo es menor, el padre se intercambia con él (se hunde).
+4. El ciclo se repite hacia abajo hasta que el padre sea menor que ambos hijos o alcance una hoja.
+
+### 7. Explica por qué remove() debe mover el último elemento a la raíz.
+Para mantener intacta la forma de "árbol completo". Al borrar la raíz, queda un vacío en el índice 0. Se toma el último elemento del arreglo para llenar ese espacio (usando `pop_back` para limpiar el final), y luego se "hunde" (`trickleDown`) hasta su posición correcta.
+
+### 8. Explica qué verifica isHeap().
+Recorre el arreglo para auditar que la propiedad del montículo se mantenga; es decir, confirma que en ningún caso el valor del índice `i` sea mayor que los valores en `left(i)` o `right(i)`.
+
+### 9. Compara construir insertando n elementos vs usar heapify().
+* **Insertar 1 a 1:** Se agregan elementos al final y se hacen "subir" (`bubbleUp`).
+* **Heapify:** Toma el arreglo desordenado completo y hace "bajar" (`trickleDown`) los elementos agrupando subárboles de abajo hacia arriba, empezando desde la mitad del arreglo.
+
+### 10. Justifica por qué insertar n elementos uno por uno cuesta O(n log n).
+Cada inserción cuesta `O(log n)` en el peor caso porque el elemento podría subir toda la altura del árbol. Al repetir esta operación `n` veces, el esfuerzo total se multiplica, resultando en `O(n log n)`.
+
+### 11. Justifica por qué heapify() puede ejecutarse en O(n).
+La gran mayoría de los nodos en un árbol son hojas y al hundirlos el costo es `O(1)`. Solo una minoría (cerca de la raíz) viaja distancias largas (`O(log n)`). Matemáticamente, la suma de estos hundimientos decrecientes se acota estrictamente en un tiempo lineal `O(n)`.
+
+### 12. Ejecuta la extracción de {7, 3, 10, 1, 5, 8, 2} y explica el orden.
+Al aplicar `remove()` repetidamente se obtiene: 1, 2, 3, 5, 7, 8, 10. Salen ordenados porque `remove()` siempre extrae la raíz (el mínimo absoluto garantizado) y el árbol se repara de inmediato, colocando el siguiente número más pequeño en la raíz.
+
+### 13. Compara el heap con el BST: ¿cuál usar y cuándo?
+* **Heap:** Ideal si solo se requiere extraer el elemento de mayor prioridad repetidamente; es muy rápido (`O(1)` para leer, `O(log n)` para actualizar) y no desperdicia memoria en punteros.
+* **BST:** Conveniente para buscar datos específicos, obtener rangos (cotas) o listar los elementos en orden, ya que mantiene la estructura clasificada internamente.
+
+
+## Bloque 9 - Cierre comparativo y preparación de sustentación
+
+
+**¿Qué cambia cuando pasamos de estudiar listas, pilas y colas a diseñar árboles binarios, heaps y árboles binarios de búsqueda?**
+
+| Concepto | Afirmación |
+| :--- | :--- |
+| **Representación enlazada** | Pasamos de una línea recta a una estructura jerárquica. Ahora usamos nodos con múltiples punteros (izquierdo, derecho, padre) que nos permiten navegar en varias direcciones. |
+| **Representación implícita** | Descubrimos que, si el árbol está completo, podemos ahorrarnos los punteros y usar un simple arreglo. Las posiciones de padres e hijos se calculan con pura matemática usando los índices. |
+| **Estructura vs. Orden** | Entendemos que la "forma" física del árbol (propiedad estructural) es independiente de la regla lógica que usamos para acomodar los datos (orden en BST o prioridad en Heaps). |
+| **Uso de recorridos** | Como los datos ya no están en una fila, los recorridos se vuelven obligatorios para "aplanar" las ramas del árbol y convertirlas en una secuencia que podamos leer uno por uno. |
+| **Mantenimiento interno** | Insertar o borrar ya no es solo redirigir un puntero local. Ahora implica un mantenimiento en cascada hacia arriba para recalcular las alturas y reparar todos los punteros `parent`. |
+| **BST y ordenamiento** | El BST impone un orden estricto que hace las búsquedas rapidísimas (descartando mitades en cada paso) y nos regala los datos de menor a mayor con solo hacer un recorrido inorden. |
+| **Heap y rendimiento** | El Heap sacrifica el orden total para darnos acceso instantáneo al elemento de mayor prioridad. Aunque insertar y borrar cuesta O(log n), podemos construir toda la estructura de golpe en O(n) con `heapify`. |
+| **Evidencia de correctitud** | Ya no basta con ver que la demo imprima lo esperado. Ahora hay que usar pruebas para validar casos borde, trazar a mano la lógica, justificar el costo de tiempo (complejidad) y demostrar que los invariantes matemáticos no se rompieron. |
