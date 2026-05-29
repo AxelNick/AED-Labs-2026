@@ -91,3 +91,115 @@ El `Treap` (combina la propiedad de orden por claves de un BST con la propiedad 
 ### 8. ¿Qué evidencia inicial obtuviste al ejecutar las pruebas sin modificar nada?
 Que el 100% de los tests (públicos e internos) pasan sin fallos.
 
+
+## Bloque 2 - Modificación de utilidades de heap completo
+
+Revisamos: 
+
+* `Semana6/include/PQ_ComplHeap_macro.h`
+* `Semana6/include/PQ_ComplHeap_percolateUp.h`
+* `Semana6/include/PQ_ComplHeap_percolateDown.h`
+
+* **Fragmento del código modificado:**
+
+**`Libreria_cc232/Semana6/include/PQ_ComplHeap_macro.h`**
+
+```cpp
+#pragma once
+
+#include <cstddef>
+
+namespace ods {
+
+inline constexpr std::size_t pqParent(std::size_t i) noexcept { return (i - 1) / 2; }
+inline constexpr std::size_t pqLeftChild(std::size_t i) noexcept { return 2 * i + 1; }
+inline constexpr std::size_t pqRightChild(std::size_t i) noexcept { return 2 * i + 2; }
+inline constexpr bool pqInHeap(std::size_t i, std::size_t n) noexcept { return i < n; }
+inline constexpr bool pqHasParent(std::size_t i) noexcept { return i > 0; }
+inline constexpr std::size_t pqLastInternal(std::size_t n) noexcept {
+  return n == 0 ? 0 : pqParent(n - 1);
+}
+
+// Funciones auxiliares constexpr adicionales
+inline constexpr bool pqHasLeftChild(std::size_t i, std::size_t n) noexcept {
+  return pqLeftChild(i) < n;
+}
+
+inline constexpr bool pqHasRightChild(std::size_t i, std::size_t n) noexcept {
+  return pqRightChild(i) < n;
+}
+
+inline constexpr bool pqIsLeaf(std::size_t i, std::size_t n) noexcept {
+  return !pqHasLeftChild(i, n);
+}
+
+inline constexpr bool pqIsInternal(std::size_t i, std::size_t n) noexcept {
+  return pqHasLeftChild(i, n);
+}
+
+}  // namespace ods
+```
+
+**`Libreria_cc232/Semana6/include/PQ_ComplHeap_percolateDown.h`**
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <vector>
+
+#include "PQ_ComplHeap_macro.h"
+
+namespace ods {
+
+template <class T, class Compare>
+std::size_t complHeapPercolateDown(std::vector<T>& a, std::size_t n, std::size_t i, Compare comp) {
+  // Funciones auxiliares para simplificar percolateDown
+  while (pqHasLeftChild(i, n)) {
+    std::size_t c = pqLeftChild(i);
+    
+    if (pqHasRightChild(i, n) && comp(a[c], a[pqRightChild(i)])) {
+      c = pqRightChild(i);
+    }
+    
+    if (!comp(a[i], a[c])) {
+      break;
+    }
+    
+    std::swap(a[i], a[c]);
+    i = c;
+  }
+  return i;
+}
+
+}  // namespace ods
+```
+
+**Explicación de por qué no cambia la complejidad:**
+
+La complejidad se mantiene exactamente igual en $O(\log n)$. Al usar la etiqueta `inline constexpr`, el compilador resuelve las llamadas y las sustituye directamente por las fórmulas básicas durante la compilación. No hay sobrecarga de llamadas a funciones en tiempo de ejecución ni uso de memoria extra.
+
+**Evidencia de compilación:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_pq_complheap_basico
+[2/2] Linking CXX executable Semana6\sem6_demo_pq_complheap_basico.exe
+```
+
+1. **¿Por qué conviene expresar parent, left, right y pruebas de frontera como funciones pequeñas?**
+   Para mejorar la legibilidad y evitar errores manuales. Es más seguro y semántico leer `pqHasLeftChild(i, n)` que tener la lógica matemática regada por todos los bucles.
+
+2. **¿Qué ventaja tiene constexpr frente a macros?**
+   Las macros (como `#define`) solo reemplazan texto "a ciegas", lo que puede generar errores difíciles de rastrear. `constexpr` usa el sistema de tipos de C++, respeta el alcance de las variables y se evalúa de forma segura en tiempo de compilación.
+
+3. **¿Qué caso borde aparece cuando el nodo tiene solo hijo izquierdo?**
+   Ocurre en el último nodo interno cuando la cantidad total de elementos del arreglo es par. Hay que controlar este caso para evitar que el algoritmo intente comparar valores con un hijo derecho que no existe y provoque un error de "fuera de índice" (Out of Bounds).
+
+4. **¿Qué condición identifica una hoja en la representación implícita?**
+   Basta con verificar que el nodo no tenga un hijo izquierdo (`!pqHasLeftChild(i, n)`). En un árbol binario completo, si no hay hijo izquierdo, es físicamente imposible que haya uno derecho.
+
+5. **¿Qué cambió en percolateDown después de usar las funciones auxiliares?**
+   La condición del bucle pasó de usar el genérico `pqInHeap` con un cálculo anidado a un semántico `pqHasLeftChild`. Igualmente, la verificación del hijo derecho ahora se lee de forma directa y clara con `pqHasRightChild`, haciendo que la intención del código sea obvia.
+
+*(Se pueden observar los cambios realizados en los códigos mencionados y compilarlos directamente desde la carpeta demo_bloque2)*
