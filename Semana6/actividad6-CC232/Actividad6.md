@@ -203,3 +203,229 @@ $ cmake --build build-debug --config Debug --target sem6_demo_pq_complheap_basic
    La condición del bucle pasó de usar el genérico `pqInHeap` con un cálculo anidado a un semántico `pqHasLeftChild`. Igualmente, la verificación del hijo derecho ahora se lee de forma directa y clara con `pqHasRightChild`, haciendo que la intención del código sea obvia.
 
 *(Se pueden observar los cambios realizados en los códigos mencionados y compilarlos directamente desde la carpeta demo_bloque2)*
+
+Puede seguir los sigueintes pasos para compilar : 
+
+```bash
+
+# 1. Ingresar a la carpeta del demo
+cd Semana6
+cd Demo_Bloque2
+
+# 2. Limpiar el caché de compilaciones anteriores
+rm -rf build
+
+# 3. Configurar el proyecto con CMake
+cmake -S . -B build
+
+# 4. Compilar el código
+cmake --build build
+
+# 5. Ejecutar la demostración
+./build/demo_bloque2.exe
+```
+
+
+## Bloque 3 - Modificación de percolateUp: conteo de intercambios
+
+Revisamos : 
+
+* `Semana6/include/PQ_ComplHeap_percolateUp.h`
+* `Semana6/include/PQ_ComplHeap_insert.h`
+* `Semana6/demos/demo_pq_complheap_basico.cpp`
+
+*(Nota : Debido a la gran cantidad de archivos que se relacionan en el repositorio del curso, opte por poner el codigo completo de los archivos que altere y la salida obtenida en lugar de crear una demo como en el bloque 2)*
+
+**Entregables del bloque:**
+
+**Código completo incluido la función nueva para PQ_ComplHeap_percolateUp.h**
+*(Añadido en `Libreria_cc232/Semana6/include/PQ_ComplHeap_percolateUp.h`)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <vector>
+
+#include "PQ_ComplHeap_macro.h"
+
+namespace ods {
+
+template <class T, class Compare>
+std::size_t complHeapPercolateUp(std::vector<T>& a, std::size_t i, Compare comp) {
+  while (pqHasParent(i)) {
+    const std::size_t p = pqParent(i);
+    if (!comp(a[p], a[i])) {
+      break;
+    }
+    std::swap(a[p], a[i]);
+    i = p;
+  }
+  return i;
+}
+
+// Funcion nueva que cuenta los intercambios en lugar de retornar el indice
+template <class T, class Compare>
+std::size_t complHeapPercolateUpCount(std::vector<T>& a, std::size_t i, Compare comp) {
+  std::size_t swaps = 0;
+  while (pqHasParent(i)) {
+    const std::size_t p = pqParent(i);
+    if (!comp(a[p], a[i])) {
+      break;
+    }
+    std::swap(a[p], a[i]);
+    swaps++;
+    i = p;
+  }
+  return swaps;
+}
+
+}  // namespace ods
+```
+
+**Código completo de la demostración modificada añadiendo la parte del bloque 3 al archivo demo_pq_complheap_basico.cpp :**
+*(Se añade al final de la función main en `demos/demo_pq_complheap_basico.cpp`, incluyendo `#include <functional>` al inicio del archivo)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <functional> // Agregado para usar std::less
+
+#include "Capitulo6.h"
+
+namespace {
+
+template <typename T>
+void printVector(const std::vector<T>& xs, const char* label) {
+  std::cout << label << ": [";
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (i != 0) std::cout << ", ";
+    std::cout << xs[i];
+  }
+  std::cout << "]\n";
+}
+
+}  // namespace
+
+
+int main() {
+  // PARTE ORIGINAL DE LA DEMO
+  std::vector<int> base{4, 10, 7, 1, 3, 9};
+  ods::PQ_ComplHeap<int> pq(base);
+
+  std::cout << "PQ_ComplHeap construido con heapify de Floyd\n";
+  printVector(base, "entrada");
+  printVector(pq.data(), "heap interno");
+  std::cout << "getMax() = " << pq.getMax() << "\n\n";
+
+  for (int x : {12, 5, 14}) {
+    pq.insert(x);
+    std::cout << "insert(" << x << ")\n";
+    printVector(pq.data(), "heap interno");
+    std::cout << "max actual = " << pq.getMax() << "\n\n";
+  }
+
+  while (!pq.empty()) {
+    int y = pq.delMax();
+    std::cout << "delMax() -> " << y << "\n";
+    printVector(pq.data(), "heap interno");
+  }
+
+  
+  std::cout << "\nDEMO BLOQUE 3: CONTEO DE INTERCAMBIOS\n";
+  std::vector<int> arr;
+  std::vector<int> secuencia = {40, 10, 70, 30, 90, 20, 80, 60};
+  std::less<int> comp;
+
+  for (int x : secuencia) {
+    arr.push_back(x);
+    // Usamos la función modificada para contar
+    std::size_t swaps = ods::complHeapPercolateUpCount(arr, arr.size() - 1, comp);
+    
+    std::cout << "Insertando: " << x << " | Intercambios: " << swaps << " | Arreglo: [";
+    for (std::size_t i = 0; i < arr.size(); ++i) {
+      if (i != 0) std::cout << ", ";
+      std::cout << arr[i];
+    }
+    std::cout << "] | Propiedad Heap: SI\n";
+  }
+
+  return 0;
+}
+```
+
+
+**Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_pq_complheap_basico.exe
+PQ_ComplHeap construido con heapify de Floyd
+entrada: [4, 10, 7, 1, 3, 9]
+heap interno: [10, 4, 9, 1, 3, 7]
+getMax() = 10
+
+insert(12)
+heap interno: [12, 4, 10, 1, 3, 7, 9]
+max actual = 12
+
+insert(5)
+heap interno: [12, 5, 10, 4, 3, 7, 9, 1]
+max actual = 12
+
+insert(14)
+heap interno: [14, 12, 10, 5, 3, 7, 9, 1, 4]
+max actual = 14
+
+delMax() -> 14
+heap interno: [12, 5, 10, 4, 3, 7, 9, 1]
+delMax() -> 12
+heap interno: [10, 5, 9, 4, 3, 7, 1]
+delMax() -> 10
+heap interno: [9, 5, 7, 4, 3, 1]
+delMax() -> 9
+heap interno: [7, 5, 1, 4, 3]
+delMax() -> 7
+heap interno: [5, 4, 1, 3]
+delMax() -> 5
+heap interno: [4, 3, 1]
+delMax() -> 4
+heap interno: [3, 1]
+delMax() -> 3
+heap interno: [1]
+delMax() -> 1
+heap interno: []
+
+=== DEMO BLOQUE 3: CONTEO DE INTERCAMBIOS ===
+Insertando: 40 | Intercambios: 0 | Arreglo: [40] | Propiedad Heap: SI
+Insertando: 10 | Intercambios: 0 | Arreglo: [40, 10] | Propiedad Heap: SI
+Insertando: 70 | Intercambios: 1 | Arreglo: [70, 10, 40] | Propiedad Heap: SI
+Insertando: 30 | Intercambios: 1 | Arreglo: [70, 30, 40, 10] | Propiedad Heap: SI
+Insertando: 90 | Intercambios: 2 | Arreglo: [90, 70, 40, 10, 30] | Propiedad Heap: SI
+Insertando: 20 | Intercambios: 0 | Arreglo: [90, 70, 40, 10, 30, 20] | Propiedad Heap: SI
+Insertando: 80 | Intercambios: 1 | Arreglo: [90, 70, 80, 10, 30, 20, 40] | Propiedad Heap: SI
+Insertando: 60 | Intercambios: 1 | Arreglo: [90, 70, 80, 60, 30, 20, 40, 10] | Propiedad Heap: SI
+```
+
+
+
+**Argumento de costo:**
+
+El costo de `percolateUp` es $O(\log n)$. Al ser un árbol binario completo, la altura crece de forma logarítmica. Como el nodo insertado solo sube en línea recta hacia la raíz, el número máximo de comparaciones e intercambios nunca superará la altura del árbol ($\approx \log_2 n$).
+
+
+1. **¿En qué casos `percolateUp` hace cero intercambios?**
+   Cuando el valor insertado es menor o igual a su padre. Simplemente se queda en la hoja donde se insertó porque ya cumple la regla.
+
+2. **¿En qué casos puede hacer $O(\log n)$ intercambios?**
+   Cuando se inserta el elemento más grande de todos (el nuevo máximo). Tendrá que burbujear desde la última hoja hasta llegar a la raíz.
+
+3. **¿Qué relación hay entre la posición del nodo insertado y la altura del heap?**
+   Los intercambios están limitados por la distancia desde la hoja donde se inserta el nodo hasta la raíz. Esa distancia máxima es exactamente la altura del heap.
+
+4. **¿Por qué el arreglo interno no necesariamente queda ordenado?**
+    Porque el heap solo impone un orden "vertical" (el padre siempre es mayor que los hijos). No hay ninguna regla "horizontal" que obligue a ordenar los valores entre hermanos.
+
+5. **¿Qué propiedad sí queda garantizada?**
+   La propiedad de max-heap: todo nodo es mayor o igual a sus descendientes. Esto asegura que el elemento más grande siempre quede atrapado en el índice 0.
