@@ -709,5 +709,362 @@ Despues de reparar: []
     Ese hijo será obligatoriamente el izquierdo debido a las propiedades de completitud. La comparación se hace directamente con él, omitiendo evaluar al derecho porque no existe.
 
   * **¿Por qué delMax tiene costo $O(\log n)$?**  
-    Porque el nodo colocado en la raíz solo desciende por un único camino lineal hasta llegar, en el peor de los casos, a una hoja. El número máximo de intercambios se encuentra acotado por la altura del árbol ($\approx \log_2 n$).
+    Porque el nodo colocado en la raíz solo desciende por un único camino lineal hasta llegar, en el peor de los casos, a una hoja. El número máximo de intercambios se encuentra acotado por la altura del árbol.
+
+
+## Bloque 5 - Validación explícita de la propiedad heap
+
+Revisamos:
+* `Semana6/include/PQ_ComplHeap.h`
+* `Semana6/pruebas_publicas/test_public_week6.cpp`
+* `Semana6/pruebas_internas/test_internal_week6.cpp`
+
+**Entregables del bloque:**
+
+* **Código completo de PQ_ComplHeap.h añadiendo la funcion de validación:**  
+*(Añadido dentro de la clase `PQ_ComplHeap` en `Libreria_cc232/Semana6/include/PQ_ComplHeap.h`, debajo del método `isHeap()`)*
+
+```cpp
+#pragma once
+
+#include <functional>
+#include <initializer_list>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "PQ.h"
+#include "PQ_ComplHeap_delMax.h"
+#include "PQ_ComplHeap_getMax.h"
+#include "PQ_ComplHeap_heapifyFloyd.h"
+#include "PQ_ComplHeap_insert.h"
+#include "PQ_ComplHeap_macro.h"
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class PQ_ComplHeap : public PQ<T> {
+ public:
+  PQ_ComplHeap() = default;
+  explicit PQ_ComplHeap(Compare comp) : comp_(std::move(comp)) {}
+
+  explicit PQ_ComplHeap(std::vector<T> values, Compare comp = Compare{})
+      : data_(std::move(values)), comp_(std::move(comp)) {
+    heapify();
+  }
+
+  PQ_ComplHeap(std::initializer_list<T> values, Compare comp = Compare{})
+      : data_(values), comp_(std::move(comp)) {
+    heapify();
+  }
+
+  void insert(const T& e) override { complHeapInsert(data_, e, comp_); }
+
+  template <class InputIt>
+  void insertAll(InputIt first, InputIt last) {
+    for (; first != last; ++first) {
+      insert(*first);
+    }
+  }
+
+  T delMax() override { return complHeapDelMax(data_, comp_); }
+
+  const T& getMax() const override { return complHeapGetMax(data_); }
+  bool empty() const noexcept override { return data_.empty(); }
+  std::size_t size() const noexcept override { return data_.size(); }
+
+  void clear() noexcept { data_.clear(); }
+  void reserve(std::size_t n) { data_.reserve(n); }
+  void heapify() { complHeapHeapifyFloyd(data_, comp_); }
+
+  void rebuildFrom(std::vector<T> values) {
+    data_ = std::move(values);
+    heapify();
+  }
+
+  const std::vector<T>& data() const noexcept { return data_; }
+  static constexpr std::size_t parent(std::size_t i) noexcept { return pqParent(i); }
+  static constexpr std::size_t left(std::size_t i) noexcept { return pqLeftChild(i); }
+  static constexpr std::size_t right(std::size_t i) noexcept { return pqRightChild(i); }
+
+  bool isHeap() const {
+    for (std::size_t i = 0; i < data_.size(); ++i) {
+      const std::size_t l = left(i);
+      const std::size_t r = right(i);
+      if (l < data_.size() && comp_(data_[i], data_[l])) {
+        return false;
+      }
+      if (r < data_.size() && comp_(data_[i], data_[r])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Bloque 5 : Función de validación explícita
+  bool isValidHeap() const {
+    for (std::size_t i = 0; i < data_.size(); ++i) {
+      const std::size_t l = left(i);
+      const std::size_t r = right(i);
+      
+      if (l < data_.size() && comp_(data_[i], data_[l])) {
+        return false;
+      }
+      if (r < data_.size() && comp_(data_[i], data_[r])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+ private:
+  std::vector<T> data_;
+  Compare comp_{};
+};
+
+}  // namespace ods
+```
+
+* **Pruebas públicas actualizadas :**  
+*(Reemplazo completo del archivo`Libreria_cc232/Semana6/pruebas_publicas/test_public_week6.cpp` ara incluir el bloque inicial de las 6 validaciones con isValidHeap() y reemplazar todas las llamadas antiguas de isHeap() en el resto del archivo)*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // Bloque 5 : PRUEBAS DE VALIDACIÓN isValidHeap
+  ods::PQ_ComplHeap<int> pqEmpty;
+  assert(pqEmpty.isValidHeap()); // 1. Heap vacío
+
+  ods::PQ_ComplHeap<int> pqOne;
+  pqOne.insert(42);
+  assert(pqOne.isValidHeap()); // 2. Heap con un elemento
+
+  ods::PQ_ComplHeap<int> pqRep;
+  pqRep.insert(7); pqRep.insert(7); pqRep.insert(7);
+  assert(pqRep.isValidHeap()); // 3. Heap con elementos repetidos
+
+  ods::PQ_ComplHeap<int> pqIns;
+  for (int x : {15, 2, 8, 1, 99, 4}) pqIns.insert(x);
+  assert(pqIns.isValidHeap()); // 4. Heap construido por inserciones
+
+  ods::PQ_ComplHeap<int> h{4, 10, 7, 1, 3, 9};
+  assert(h.isValidHeap()); // 5. Heap construido por inicializador (heapify)
+  assert(h.getMax() == 10);
+  
+  h.insert(12);
+  assert(h.isValidHeap()); 
+  
+  assert(h.delMax() == 12);
+  assert(h.isValidHeap()); // 6. Heap después de inserciones y extracciones
+  
+  // ----------------------------------------------------
+  // Pruebas de ordenamiento
+  std::vector<int> xs{5, 1, 8, 3, 2};
+  ods::heapSort(xs);
+  assert((xs == std::vector<int>{1, 2, 3, 5, 8}));
+
+  // Pruebas de Leftist Heap
+  ods::PQ_LeftHeap<int> a{7, 2, 9};
+  ods::PQ_LeftHeap<int> b{1, 8, 3};
+  ods::leftHeapMerge(a, b);
+  assert(b.empty());
+  assert(a.size() == 6);
+  assert(a.isLeftistHeap());
+  assert(a.getMax() == 9);
+
+  // Pruebas de Codificación Huffman
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12},
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes = ods::huffmanGenerateCodes(s);
+  const auto tree = ods::huffmanGenerateTree(s);
+  const std::string msg = "face";
+  const std::string bits = ods::huffmanEncode(msg, codes);
+  assert(ods::huffmanDecode(bits, tree) == msg);
+  assert(ods::huffmanIsPrefixFree(codes));
+
+  // Pruebas de Binary Search Tree (Rotaciones)
+  ods::BinarySearchTree<int> bst;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7}) {
+    bst.add(x);
+  }
+  const auto before = bst.inorder();
+  bst.rotateRight(bst.root());
+  bst.rotateLeft(bst.root());
+  const auto after = bst.inorder();
+  assert(before == after);
+  assert(bst.isBST());
+
+  // Pruebas de Treap
+  ods::Treap<int> treap(123);
+  assert(treap.addWithPriority(8, 80));
+  assert(treap.addWithPriority(3, 60));
+  assert(treap.addWithPriority(10, 90));
+  assert(treap.addWithPriority(1, 50));
+  assert(treap.addWithPriority(6, 70));
+  assert(treap.isTreap());
+  assert(!treap.addWithPriority(6, 71));
+  assert(treap.contains(3));
+  assert(treap.remove(3));
+  assert(!treap.contains(3));
+  assert(treap.isTreap());
+
+  return 0;
+}
+```
+
+* **Pruebas internas actualizadas :**  
+*(Reemplazo completo del archivo `Libreria_cc232/Semana6/pruebas_internas/test_internal_week6.cpp` incorporando las pruebas de validación explícita y estandarizando las aserciones de isValidHeap() dentro de los ciclos de extracción y validación continua)*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // Bloque 5: PRUEBAS DE VALIDACIÓN isValidHeap
+  ods::PQ_ComplHeap<int> pqEmpty;
+  assert(pqEmpty.isValidHeap()); // 1. Heap vacío
+
+  ods::PQ_ComplHeap<int> pqOne;
+  pqOne.insert(42);
+  assert(pqOne.isValidHeap()); // 2. Heap con un elemento
+
+  ods::PQ_ComplHeap<int> pqRep;
+  pqRep.insert(7); pqRep.insert(7); pqRep.insert(7);
+  assert(pqRep.isValidHeap()); // 3. Heap con elementos repetidos
+
+  ods::PQ_ComplHeap<int> pqIns;
+  for (int x : {15, 2, 8, 1, 99, 4}) pqIns.insert(x);
+  assert(pqIns.isValidHeap()); // 4. Heap construido por inserciones
+
+  ods::PQ_ComplHeap<int> pqHeapify(std::vector<int>{15, 2, 8, 1, 99, 4});
+  assert(pqHeapify.isValidHeap()); // 5. Heap construido por heapify
+  
+  pqHeapify.delMax();
+  pqHeapify.delMax();
+  assert(pqHeapify.isValidHeap()); // 6. Heap después de varias llamadas a delMax
+  // ----------------------------------------------------
+
+  // PQ_ComplHeap: secuencia completa de extracciones.
+  ods::PQ_ComplHeap<int> pq;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13, 14}) {
+    pq.insert(x);
+    assert(pq.isValidHeap()); // Validación tras cada inserción
+  }
+  
+  std::vector<int> out;
+  while (!pq.empty()) {
+    out.push_back(pq.delMax());
+    assert(pq.empty() || pq.isValidHeap()); // Validación tras cada extracción
+  }
+  assert((out == std::vector<int>{14, 14, 13, 10, 8, 7, 6, 4, 3, 1}));
+
+  // Leftist heap: merge e invariantes.
+  ods::PQ_LeftHeap<int> a{20, 7, 18, 3};
+  ods::PQ_LeftHeap<int> b{19, 8, 4, 1, 17};
+  a.merge(b);
+  assert(a.isLeftistHeap());
+  assert(b.empty());
+  
+  std::vector<int> leftOut;
+  while (!a.empty()) {
+    leftOut.push_back(a.delMax());
+    assert(a.empty() || a.isLeftistHeap());
+  }
+  assert((leftOut == std::vector<int>{20, 19, 18, 17, 8, 7, 4, 3, 1}));
+
+  // Huffman: heap completo y leftist heap deben tener mismo costo ponderado.
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12},
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes1 = ods::huffmanGenerateCodes(s);
+  const auto codes2 = ods::huffmanGenerateCodesLeftHeap(s);
+  assert(ods::huffmanIsPrefixFree(codes1));
+  assert(ods::huffmanIsPrefixFree(codes2));
+  assert(ods::huffmanWeightedPathLength(s, codes1) == 224);
+  assert(ods::huffmanWeightedPathLength(s, codes2) == 224);
+
+  // Rotaciones BST: preservan inorder aun cuando cambie la forma.
+  ods::BinarySearchTree<int> bst;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13}) {
+    bst.add(x);
+  }
+  auto sorted = bst.inorder();
+  bst.rotateLeft(bst.root());
+  assert(bst.isBST());
+  assert(bst.inorder() == sorted);
+  
+  bst.rotateRight(bst.root());
+  assert(bst.isBST());
+  assert(bst.inorder() == sorted);
+
+  // Treap: BST por clave + heap por prioridad.
+  ods::Treap<int> treap(555);
+  treap.addWithPriority(8, 80);
+  treap.addWithPriority(3, 40);
+  treap.addWithPriority(10, 90);
+  treap.addWithPriority(1, 20);
+  treap.addWithPriority(6, 70);
+  treap.addWithPriority(14, 120);
+  treap.addWithPriority(4, 65);
+  treap.addWithPriority(7, 68);
+  
+  assert(treap.isTreap());
+  assert((treap.inorderKeys() == std::vector<int>{1, 3, 4, 6, 7, 8, 10, 14}));
+  assert(treap.lowerBound(5)->key == 6);
+  assert(treap.upperBound(6)->key == 7);
+  
+  assert(treap.remove(3));
+  assert(treap.remove(8));
+  assert(treap.isTreap());
+  assert((treap.inorderKeys() == std::vector<int>{1, 4, 6, 7, 10, 14}));
+
+  return 0;
+}
+
+```
+
+* **Evidencia de ctest:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ctest --test-dir build-debug -C Debug -R semana6 --output-on-failure
+Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/build-debug
+    Start 22: semana6_public
+1/2 Test #22: semana6_public ...................   Passed    0.13 sec
+    Start 23: semana6_internal
+2/2 Test #23: semana6_internal .................   Passed    0.12 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.45 sec
+
+```
+
+### Preguntas : 
+
+  * **¿Qué invariante verifica la función?**  
+    La propiedad estructural de heap: que el valor de cada nodo padre sea siempre mayor o igual (en un max-heap) al valor de sus hijos directos.
+
+  * **¿Por qué basta revisar relaciones padre-hijo?**  
+    Por la propiedad de transitividad. Si el ancestro es mayor o igual que el padre, y el padre es mayor o igual que el hijo, matemáticamente se garantiza que el ancestro es mayor o igual que el hijo.
+
+  * **¿Por qué no es necesario comparar cada nodo con todos sus descendientes?**  
+    Debido a la misma relación de transitividad mencionada. Realizar comparaciones exhaustivas con cada descendiente resultaría redundante y reduciría la eficiencia del algoritmo a una complejidad de $O(n^2)$.
+
+  * **¿Cuál es el costo de validar todo el heap?**  
+    El costo temporal es de $O(n)$, debido a que se recorre el arreglo completo exactamente una vez y se efectúan dos comparaciones simples (hijo izquierdo e hijo derecho) por cada elemento.
+
+  * **¿Por qué esta función es útil en pruebas pero no necesariamente en producción?**  
+    Porque operaciones básicas como insertar o eliminar (`delMax`) toman tiempo logarítmico $O(\log n)$. Si tras cada una de estas rutinas se invoca una validación de costo lineal $O(n)$, se degradaría la eficiencia global de la estructura. Por ende, su propósito queda restringido a la verificación de la lógica durante la etapa de desarrollo.
 
