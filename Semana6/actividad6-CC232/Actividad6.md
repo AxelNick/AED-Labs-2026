@@ -100,7 +100,7 @@ Revisamos:
 * `Semana6/include/PQ_ComplHeap_percolateUp.h`
 * `Semana6/include/PQ_ComplHeap_percolateDown.h`
 
-* **Fragmento del código modificado:**
+**Fragmento del código modificado:**
 
 **`Libreria_cc232/Semana6/include/PQ_ComplHeap_macro.h`**
 
@@ -204,7 +204,7 @@ $ cmake --build build-debug --config Debug --target sem6_demo_pq_complheap_basic
 
 *(Se pueden observar los cambios realizados en los códigos mencionados y compilarlos directamente desde la carpeta demo_bloque2)*
 
-Puede seguir los sigueintes pasos para compilar : 
+Puede seguir los siguientes pasos para compilar : 
 
 ```bash
 
@@ -224,7 +224,6 @@ cmake --build build
 # 5. Ejecutar la demostración
 ./build/demo_bloque2.exe
 ```
-
 
 ## Bloque 3 - Modificación de percolateUp: conteo de intercambios
 
@@ -1145,11 +1144,6 @@ int main() {
 }
 ```
 
-* **Codigo completo del archivo demo_heapify_floyd.cpp con la demostración modificada:**  
-*(Reemplazamos todo el contenido de `Libreria_cc232/Semana6/demos/demo_heapify_floyd.cpp` por este código)*
-
-
-
 * **Codigo completo del archivo PQ_ComplHeap_insert.h:**  
 *(El archivo no fue modificado para este bloque)*
 
@@ -1238,3 +1232,162 @@ La mayoría de los nodos son hojas que bajan 0 veces, el nivel superior baja com
 
   * **¿Por qué Floyd no necesita llamar a percolateDown desde las hojas?**  
     Una hoja carece de hijos hacia donde bajar. Cualquier nodo individual aislado se considera un sub-heap válido por sí mismo, por lo que intentar repararlo constituiría una ejecución redundante de ciclos.
+
+
+## Bloque 7 - Modificación de heapSort
+
+Revisamos:
+* `Semana6/include/vector_heapSort.h`
+* `Semana6/demos/demo_heapsort.cpp`
+
+**Entregables del bloque:**
+
+* **Código completo del archivo de vector_heapSort.h modificado:**  
+*(Añadimos al final de `Libreria_cc232/Semana6/include/vector_heapSort.h`, antes de cerrar el namespace)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <functional>
+#include <vector>
+
+#include "PQ_ComplHeap_heapifyFloyd.h"
+#include "PQ_ComplHeap_percolateDown.h"
+
+namespace ods {
+
+// Función original
+template <class T, class Compare = std::less<T>>
+void heapSort(std::vector<T>& a, Compare comp = Compare{}) {
+  if (a.size() < 2) {
+    return;
+  }
+  complHeapHeapifyFloyd(a, comp);
+  for (std::size_t n = a.size(); n > 1; --n) {
+    std::swap(a[0], a[n - 1]);
+    complHeapPercolateDown(a, n - 1, 0, comp);
+  }
+}
+
+// Bloque 7 : Nueva versión de heapSort con dirección de ordenamiento
+template <class T, class Compare>
+void heapSort(std::vector<T>& a, Compare comp, bool ascending) {
+  if (a.size() < 2) return;
+
+  if (ascending) {
+    complHeapHeapifyFloyd(a, comp);
+    for (std::size_t n = a.size(); n > 1; --n) {
+      std::swap(a[0], a[n - 1]);
+      complHeapPercolateDown(a, n - 1, 0, comp);
+    }
+  } else {
+    auto revComp = [&](const T& x, const T& y) { return comp(y, x); };
+    complHeapHeapifyFloyd(a, revComp);
+    for (std::size_t n = a.size(); n > 1; --n) {
+      std::swap(a[0], a[n - 1]);
+      complHeapPercolateDown(a, n - 1, 0, revComp);
+    }
+  }
+}
+
+template <class T, class Compare = std::less<T>>
+std::vector<T> heapSorted(std::vector<T> a, Compare comp = Compare{}) {
+  heapSort(a, comp);
+  return a;
+}
+
+}  // namespace ods
+```
+
+* **Codigo completo del archivo demo_heapsort.cpp con la demostración actualizada:**  
+*(Reemplazamos el main en `Libreria_cc232/Semana6/demos/demo_heapsort.cpp`)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <functional>
+
+#include "Capitulo6.h"
+
+namespace {
+
+template <typename T>
+void printVector(const std::vector<T>& xs, const char* label) {
+  std::cout << label << ": [";
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (i != 0) std::cout << ", ";
+    std::cout << xs[i];
+  }
+  std::cout << "]\n";
+}
+
+}  // namespace
+
+
+int main() {
+  // PARTE ORIGINAL DE LA DEMO 
+  std::vector<int> a_orig{9, 1, 8, 3, 7, 2, 6, 4, 5};
+  printVector(a_orig, "entrada");
+  ods::heapSort(a_orig);
+  printVector(a_orig, "salida ordenada");
+  std::cout << "heapSort usa un max-heap implicito y deja el arreglo en orden ascendente.\n";
+
+  // Bloque 7: DEMO DE ASCENDENTE Y DESCENDENTE 
+  std::cout << "\nDEMO BLOQUE 7: HEAPSORT ASC / DESC\n";
+  std::vector<int> a{5, 1, 5, 3, 8, 2, 8, 0};
+  std::less<int> comp;
+
+  printVector(a, "Entrada (con repetidos)");
+
+  // Ascendente
+  std::vector<int> asc = a;
+  ods::heapSort(asc, comp, true);
+  printVector(asc, "Resultado ascendente ");
+
+  // Descendente
+  std::vector<int> desc = a;
+  ods::heapSort(desc, comp, false);
+  printVector(desc, "Resultado descendente");
+
+  return 0;
+}
+```
+
+* **Evidencia de repetidos (Salida de consola):**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_heapsort
+[2/2] Linking CXX executable Semana6\sem6_demo_heapsort.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_heapsort.exe
+entrada: [9, 1, 8, 3, 7, 2, 6, 4, 5]
+salida ordenada: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+heapSort usa un max-heap implicito y deja el arreglo en orden ascendente.
+
+DEMO BLOQUE 7: HEAPSORT ASC / DESC
+Entrada (con repetidos): [5, 1, 5, 3, 8, 2, 8, 0]
+Resultado ascendente : [0, 1, 2, 3, 5, 5, 8, 8]
+Resultado descendente: [8, 8, 5, 5, 3, 2, 1, 0]
+
+```
+*(Se observa que maneja correctamente los valores 5 y 8 repetidos en ambas direcciones).*
+
+### Preguntas : 
+  * **¿Por qué heapsort puede ordenar in situ?**  
+    Porque reutiliza el mismo arreglo. Al extraer la raíz, el límite virtual del heap se reduce en uno, dejando espacio libre exactamente al final del arreglo para guardar el elemento extraído sin gastar memoria adicional.
+
+  * **¿Qué parte del algoritmo destruye gradualmente el heap?**  
+    El bucle de extracciones. Al usar `std::swap(a[0], a[n - 1])` para mandar la raíz al final y reducir la variable `n`, la estructura de árbol se desintegra paso a paso hasta dejar únicamente el arreglo ordenado.
+
+  * **¿Por qué heapsort cuesta $O(n \log n)$?**  
+    Porque se divide en dos fases: construir el heap inicial con el método de Floyd toma un tiempo de $O(n)$, y realizar las $n-1$ extracciones reparando con `percolateDown` cuesta $O(n \log n)$ (ya que cada reparación depende de la altura del árbol, $O(\log n)$).
+
+  * **¿Es heapsort estable? Justifica con un ejemplo.**  
+    No es estable. Los intercambios entre padres e hijos provocan "saltos largos" que rompen el orden relativo. Por ejemplo, en `[8a, 2, 8b]`, al extraer la raíz `8a` y mandarla al fondo del arreglo, `8b` podría terminar ubicado a la izquierda de `8a` en el resultado final.
+
+  * **¿Qué diferencia hay entre usar heapSort y extraer todos los elementos con delMax?**  
+    La diferencia principal es el consumo de memoria. `heapSort` ordena de forma *in situ* utilizando un espacio extra de $O(1)$. En cambio, extraer los elementos con `delMax` obliga a guardarlos en un vector auxiliar, lo que consume $O(n)$ de memoria adicional.
+
