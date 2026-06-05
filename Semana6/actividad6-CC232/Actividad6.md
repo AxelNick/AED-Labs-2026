@@ -1391,3 +1391,389 @@ Resultado descendente: [8, 8, 5, 5, 3, 2, 1, 0]
   * **¿Qué diferencia hay entre usar heapSort y extraer todos los elementos con delMax?**  
     La diferencia principal es el consumo de memoria. `heapSort` ordena de forma *in situ* utilizando un espacio extra de $O(1)$. En cambio, extraer los elementos con `delMax` obliga a guardarlos en un vector auxiliar, lo que consume $O(n)$ de memoria adicional.
 
+## Bloque 8 - Heap izquierdista: validación de merge
+
+Revisamos:
+* `Semana6/include/PQ_LeftHeap.h`
+* `Semana6/include/PQ_LeftHeap_merge.h`
+* `Semana6/include/PQ_LeftHeap_insert.h`
+* `Semana6/include/PQ_LeftHeap_delMax.h`
+* `Semana6/demos/demo_left_heap_merge.cpp`
+
+**Entregables del bloque:**
+
+* **Código completo del archivo PQ_LeftHeap.h con la validación explícita de invariantes :**  
+*(Añadido en `Libreria_cc232/Semana6/include/PQ_LeftHeap.h`. Se colocan la estructura `ValidState` y la función `checkNode` en la sección private y `isValidLeftHeap()` en la sección public)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <queue>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "PQ.h"
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class PQ_LeftHeap : public PQ<T> {
+  
+  struct Node {
+    T value;
+    int npl{1}; 
+    Node* left{nullptr};
+    Node* right{nullptr};
+    explicit Node(const T& v) : value(v) {}
+  };
+
+public:
+  PQ_LeftHeap() = default;
+
+  explicit PQ_LeftHeap(Compare comp) : comp_(std::move(comp)) {}
+
+  PQ_LeftHeap(std::initializer_list<T> xs, Compare comp = Compare{}) : comp_(std::move(comp)) {
+    for (const T& x : xs) {
+      insert(x);
+    }
+  }
+
+  template <class InputIt>
+  PQ_LeftHeap(InputIt first, InputIt last, Compare comp = Compare{}) : comp_(std::move(comp)) {
+    for (; first != last; ++first) {
+      insert(*first);
+    }
+  }
+
+  ~PQ_LeftHeap() { clear(root_); }
+
+  PQ_LeftHeap(const PQ_LeftHeap&) = delete;
+  PQ_LeftHeap& operator=(const PQ_LeftHeap&) = delete;
+
+  PQ_LeftHeap(PQ_LeftHeap&& other) noexcept
+      : root_(other.root_), n_(other.n_), comp_(std::move(other.comp_)) {
+    other.root_ = nullptr;
+    other.n_ = 0;
+  }
+
+  PQ_LeftHeap& operator=(PQ_LeftHeap&& other) noexcept {
+    if (this != &other) {
+      clear(root_);
+      root_ = other.root_;
+      n_ = other.n_;
+      comp_ = std::move(other.comp_);
+      other.root_ = nullptr;
+      other.n_ = 0;
+    }
+    return *this;
+  }
+
+  bool empty() const noexcept override { return n_ == 0; }
+  std::size_t size() const noexcept override { return n_; }
+
+  const T& getMax() const override {
+    if (!root_) {
+      throw std::out_of_range("getMax() sobre heap izquierdista vacio");
+    }
+    return root_->value;
+  }
+
+  void insert(const T& e) override {
+    root_ = mergeNodes(root_, new Node(e));
+    ++n_;
+  }
+
+  T delMax() override {
+    if (!root_) {
+      throw std::out_of_range("delMax() sobre heap izquierdista vacio");
+    }
+    T ans = root_->value;
+    Node* old = root_;
+    Node* a = root_->left;
+    Node* b = root_->right;
+    old->left = nullptr;
+    old->right = nullptr;
+    delete old;
+    root_ = mergeNodes(a, b);
+    --n_;
+    return ans;
+  }
+
+  void merge(PQ_LeftHeap& other) {
+    if (this == &other) {
+      return;
+    }
+    root_ = mergeNodes(root_, other.root_);
+    n_ += other.n_;
+    other.root_ = nullptr;
+    other.n_ = 0;
+  }
+
+  // Recorrido por niveles
+  std::vector<T> levelOrder() const {
+    std::vector<T> out;
+    std::queue<Node*> q;
+    if (root_) q.push(root_);
+    while (!q.empty()) {
+      Node* u = q.front();
+      q.pop();
+      out.push_back(u->value);
+      if (u->left) q.push(u->left);
+      if (u->right) q.push(u->right);
+    }
+    return out;
+  }
+
+  bool isLeftistHeap() const { return check(root_).ok; }
+
+  // Bloque 8 : Validación completa (Heap, Izquierdista y Tamaño)
+  bool isValidLeftHeap() const {
+    auto res = checkNode(root_);
+    return res.ok && (res.size == n_);
+  }
+
+private:
+  struct Check {
+    bool ok;
+    int npl;
+  };
+
+  // Bloque 8: Estructura de estado para la validación completa.
+  // Retorna si el subárbol cumple los invariantes, su NPL actual y su cantidad de nodos reales.
+  struct ValidState {
+    bool ok;
+    int npl;
+    std::size_t size;
+  };
+
+  Node* root_{nullptr};
+  std::size_t n_{0};
+  Compare comp_{};
+
+  static int npl(Node* u) noexcept { return u ? u->npl : 0; }
+
+
+  Node* mergeNodes(Node* a, Node* b) {
+    if (!a) return b;
+    if (!b) return a;
+    if (comp_(a->value, b->value)) {
+      std::swap(a, b);
+    }
+    a->right = mergeNodes(a->right, b);
+    
+    if (npl(a->left) < npl(a->right)) {
+      std::swap(a->left, a->right);
+    }
+    a->npl = npl(a->right) + 1;
+    return a;
+  }
+
+  Check check(Node* u) const {
+    if (!u) return {true, 0};
+    const Check l = check(u->left);
+    const Check r = check(u->right);
+    const bool heapOk = (!u->left || !comp_(u->value, u->left->value)) &&
+                        (!u->right || !comp_(u->value, u->right->value));
+    const bool leftistOk = npl(u->left) >= npl(u->right) && u->npl == npl(u->right) + 1;
+    return {l.ok && r.ok && heapOk && leftistOk, u->npl};
+  }
+
+  // Bloque 8 : Función recursiva de validación rigurosa
+  // verifica los puntos 1,2 y 3
+  ValidState checkNode(Node* u) const {
+    if (!u) return {true, 0, 0};
+    
+    ValidState l = checkNode(u->left);
+    ValidState r = checkNode(u->right);
+    
+    // 1. Propiedad de Heap (el nodo padre debe dominar a ambos hijos)
+    bool heapOk = (!u->left || !comp_(u->value, u->left->value)) &&
+                  (!u->right || !comp_(u->value, u->right->value));
+                  
+    // 2. Propiedad Izquierdista (NPL izquierdo >= NPL derecho) y NPL actual correcto
+    bool leftistOk = (l.npl >= r.npl) && (u->npl == r.npl + 1);
+    
+    // 3. Acumulación de tamaño de subárbol (para cotejar con n_)
+    return {l.ok && r.ok && heapOk && leftistOk, u->npl, l.size + r.size + 1};
+  }
+
+  // Limpieza recursiva de memoria
+  static void clear(Node* u) noexcept {
+    if (!u) return;
+    clear(u->left);
+    clear(u->right);
+    delete u;
+  }
+};
+
+}  // namespace ods
+
+```
+
+* **codigo completo del archivo demo_left_heap_merge con la demostración modificada:**  
+*(Reemplaza el main en `Libreria_cc232/Semana6/demos/demo_left_heap_merge.cpp`)*
+
+```cpp
+#include <iostream>
+#include <vector>
+
+#include "Capitulo6.h"
+
+namespace {
+
+template <typename T>
+void printVector(const std::vector<T>& xs, const char* label) {
+  std::cout << label << ": [";
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (i != 0) std::cout << ", ";
+    std::cout << xs[i];
+  }
+  std::cout << "]\n";
+}
+
+}  // namespace
+
+int main() {
+  std::cout << "DEMO BLOQUE 8: MERGE IZQUIERDISTA\n";
+  ods::PQ_LeftHeap<int> a{7, 2, 9};
+  ods::PQ_LeftHeap<int> b{1, 8, 3, 11};
+
+  printVector(a.levelOrder(), "Heap A (pre-merge)");
+  std::cout << "A valido? " << (a.isValidLeftHeap() ? "SI" : "NO") << "\n";
+  
+  printVector(b.levelOrder(), "Heap B (pre-merge)");
+  std::cout << "B valido? " << (b.isValidLeftHeap() ? "SI" : "NO") << "\n\n";
+
+  a.merge(b);
+  
+  printVector(a.levelOrder(), "Heap A (post-merge)");
+  std::cout << "A valido? " << (a.isValidLeftHeap() ? "SI" : "NO") << "\n";
+  std::cout << "B quedo vacio? " << (b.empty() ? "SI" : "NO") << "\n\n";
+
+  a.insert(10);
+  printVector(a.levelOrder(), "A despues de insert(10)");
+  std::cout << "A valido? " << (a.isValidLeftHeap() ? "SI" : "NO") << "\n\n";
+
+  std::cout << "Secuencia de prioridad (delMax): ";
+  while (!a.empty()) {
+    std::cout << a.delMax() << ' ';
+  }
+  std::cout << "\n";
+  
+  return 0;
+}
+```
+* **Codigo completo del archivo PQ_LeftHeap_merge.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include "PQ_LeftHeap.h"
+
+namespace ods {
+
+template <class T, class Compare>
+void leftHeapMerge(PQ_LeftHeap<T, Compare>& a, PQ_LeftHeap<T, Compare>& b) {
+  a.merge(b);
+}
+
+}  // namespace ods
+
+```
+
+* **Codigo completo del archivo PQ_LeftHeap_insert.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include "PQ_LeftHeap.h"
+
+namespace ods {
+
+template <class T, class Compare>
+void leftHeapInsert(PQ_LeftHeap<T, Compare>& h, const T& e) {
+  h.insert(e);
+}
+
+}  // namespace ods
+
+```
+
+* **Codigo completo del archivo PQ_LeftHeap_delMax.h :**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include "PQ_LeftHeap.h"
+
+namespace ods {
+
+template <class T, class Compare>
+T leftHeapDelMax(PQ_LeftHeap<T, Compare>& h) {
+  return h.delMax();
+}
+
+}  // namespace ods
+
+```
+
+* **Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_left_heap_merge
+[2/2] Linking CXX executable Semana6\sem6_demo_left_heap_merge.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_left_heap_merge.exe
+DEMO BLOQUE 8: MERGE IZQUIERDISTA
+Heap A (pre-merge): [9, 7, 2]
+A valido? SI
+Heap B (pre-merge): [11, 8, 1, 3]
+B valido? SI
+
+Heap A (post-merge): [11, 8, 9, 1, 3, 7, 2]
+A valido? SI
+B quedo vacio? SI
+
+A despues de insert(10): [11, 8, 10, 1, 3, 9, 7, 2]
+A valido? SI
+
+Secuencia de prioridad (delMax): 11 10 9 8 7 3 2 1 
+
+```
+
+### **Trazado de una fusión pequeña (Merge de A={7} y B={5}):**
+  * Se realiza una comparación entre las raíces, deduciendo que `7>5`. Por ende, la raíz de A(`7`) se consolida como la nueva raíz principal.
+  * Se procede a mezclar el subárbol derecho de A(que se encuentra nulo) con B(`5`) mediante la rutina `merge(null, 5)`.
+  * El resultado de dicha mezcla corresponde al nodo `5`. Tras este paso, el nodo `7` posee un hijo izquierdo nulo y un hijo derecho referenciando a `5`.
+  * Se efectúa el cálculo del NPL: Hijo Izquierdo(null) = 0, Hijo Derecho(5) = 1.
+  * Se identifica una transgresión a la propiedad izquierdista debido a que `NPL izq < NPL der`. Para corregirla, se realiza un intercambio de hijos.
+  * El nodo `5` se traslada como hijo izquierdo, mientras que la rama derecha se asigna como nula.
+  * Se actualiza el NPL del nodo raíz `7` mediante la relación `NPL(derecho nulo) + 1 = 1`.
+  * *Estructura final resultante:* Raíz 7, hijo izquierdo 5 e hijo derecho nulo.
+
+### Preguntas : 
+
+  * **¿Por qué merge es la operación central del heap izquierdista?**  
+    Porque es el motor de toda la estructura. Las operaciones clásicas como insertar un elemento o eliminar la raíz no tienen una lógica propia; simplemente reutilizan la función `merge` para hacer el trabajo sucio.
+
+  * **¿Cómo se implementa insert usando merge?**  
+    Para insertar un valor, se crea un heap pequeño de un solo nodo con ese valor y luego se usa `merge` para fusionarlo con el heap principal.
+    
+  * **¿Cómo se implementa delMax usando merge?**  
+    Se realiza la extracción del nodo raíz y, de manera consecutiva, se efectúa un llamado a `merge` para fusionar el subárbol izquierdo con el subárbol derecho, reconstruyendo así la jerarquía del montículo resultante.
+
+  * **¿Qué propiedad adicional diferencia un heap izquierdista de un heap binario completo?**  
+    La propiedad izquierdista. Esta regla obliga a que el "camino más corto hacia un espacio vacío" (NPL) por el lado izquierdo de un nodo siempre sea mayor o igual que por el lado derecho. Esto crea árboles visualmente desequilibrados hacia la izquierda.
+
+  * **¿Qué ventaja conceptual tiene un heap izquierdista frente a un heap binario completo?**  
+    Su velocidad para fusionarse ,unir dos heaps binarios normales en un arreglo obliga a reconstruirlos tomando $O(n)$. Un heap izquierdista, al concentrar sus espacios vacíos en el lado derecho (que es un camino muy corto), permite fusionarlos en apenas $O(\log n)$
