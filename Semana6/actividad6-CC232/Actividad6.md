@@ -238,7 +238,7 @@ Revisamos :
 
 **Entregables del bloque:**
 
-**Código completo incluido la función nueva para PQ_ComplHeap_percolateUp.h**
+**Código completo incluido la función nueva para PQ_ComplHeap_percolateUp.h :**
 *(Añadido en `Libreria_cc232/Semana6/include/PQ_ComplHeap_percolateUp.h`)*
 
 ```cpp
@@ -359,8 +359,8 @@ int main() {
 **Salida de la demostración:**
 
 ```bash
-AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
-$ ./build-debug/Semana6/sem6_demo_pq_complheap_basico.exe
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ ./build/sem6_demo_pq_complheap_basico.exe
 PQ_ComplHeap construido con heapify de Floyd
 entrada: [4, 10, 7, 1, 3, 9]
 heap interno: [10, 4, 9, 1, 3, 7]
@@ -397,7 +397,7 @@ heap interno: [1]
 delMax() -> 1
 heap interno: []
 
-=== DEMO BLOQUE 3: CONTEO DE INTERCAMBIOS ===
+DEMO BLOQUE 3: CONTEO DE INTERCAMBIOS
 Insertando: 40 | Intercambios: 0 | Arreglo: [40] | Propiedad Heap: SI
 Insertando: 10 | Intercambios: 0 | Arreglo: [40, 10] | Propiedad Heap: SI
 Insertando: 70 | Intercambios: 1 | Arreglo: [70, 10, 40] | Propiedad Heap: SI
@@ -406,9 +406,8 @@ Insertando: 90 | Intercambios: 2 | Arreglo: [90, 70, 40, 10, 30] | Propiedad Hea
 Insertando: 20 | Intercambios: 0 | Arreglo: [90, 70, 40, 10, 30, 20] | Propiedad Heap: SI
 Insertando: 80 | Intercambios: 1 | Arreglo: [90, 70, 80, 10, 30, 20, 40] | Propiedad Heap: SI
 Insertando: 60 | Intercambios: 1 | Arreglo: [90, 70, 80, 60, 30, 20, 40, 10] | Propiedad Heap: SI
+
 ```
-
-
 
 **Argumento de costo:**
 
@@ -429,3 +428,286 @@ El costo de `percolateUp` es $O(\log n)$. Al ser un árbol binario completo, la 
 
 5. **¿Qué propiedad sí queda garantizada?**
    La propiedad de max-heap: todo nodo es mayor o igual a sus descendientes. Esto asegura que el elemento más grande siempre quede atrapado en el índice 0.
+
+
+## Bloque 4 - Modificación de percolateDown: elección del hijo dominante
+
+Revisamos:
+* `Semana6/include/PQ_ComplHeap_percolateDown.h`
+* `Semana6/include/PQ_ComplHeap_delMax.h`
+* `Semana6/demos/demo_pq_complheap_basico.cpp`
+
+**Entregables del bloque:**
+
+* **Código completo de PQ_ComplHeap_percolateDown.h incluida la función nueva:**  
+*(Añadido en `Libreria_cc232/Semana6/include/PQ_ComplHeap_percolateDown.h`)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <vector>
+
+#include "PQ_ComplHeap_macro.h"
+
+namespace ods {
+
+template <class T, class Compare>
+std::size_t complHeapPercolateDown(std::vector<T>& a, std::size_t n, std::size_t i, Compare comp) {
+  // Bloque 2: Uso de funciones auxiliares para simplificar percolateDown
+  while (pqHasLeftChild(i, n)) {
+    std::size_t c = pqLeftChild(i);
+    
+    if (pqHasRightChild(i, n) && comp(a[c], a[pqRightChild(i)])) {
+      c = pqRightChild(i);
+    }
+    
+    if (!comp(a[i], a[c])) {
+      break;
+    }
+    
+    std::swap(a[i], a[c]);
+    i = c;
+  }
+  return i;
+}
+
+// Bloque 4 : Función que cuenta los intercambios al bajar
+template <class T, class Compare>
+std::size_t complHeapPercolateDownCount(std::vector<T>& a, std::size_t n, std::size_t i, Compare comp) {
+  std::size_t swaps = 0;
+  while (pqHasLeftChild(i, n)) {
+    std::size_t c = pqLeftChild(i);
+    
+    // Elegir el hijo dominante (el mayor en un max-heap)
+    if (pqHasRightChild(i, n) && comp(a[c], a[pqRightChild(i)])) {
+      c = pqRightChild(i);
+    }
+    
+    if (!comp(a[i], a[c])) {
+      break;
+    }
+    
+    std::swap(a[i], a[c]);
+    swaps++;
+    i = c;
+  }
+  return swaps;
+}
+
+}  // namespace ods
+```
+
+* **Código completo de PQ_ComplHeap_delMax.h:**  
+*(El codigo no fue alterado)*
+
+```cpp
+#pragma once
+
+#include <stdexcept>
+#include <vector>
+
+#include "PQ_ComplHeap_percolateDown.h"
+
+namespace ods {
+
+template <class T, class Compare>
+T complHeapDelMax(std::vector<T>& a, Compare comp) {
+  if (a.empty()) {
+    throw std::out_of_range("delMax() sobre heap vacio");
+  }
+  T ans = a.front();
+  a.front() = a.back();
+  a.pop_back();
+  if (!a.empty()) {
+    complHeapPercolateDown(a, a.size(), 0, comp);
+  }
+  return ans;
+}
+
+}  // namespace ods
+```
+
+* **Código completo de la demostración modificada del archivo demo_pq_complheap_basico.cpp :**  
+*(Se añade al final de la función main en `demos/demo_pq_complheap_basico.cpp`)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <functional> // Agregado para usar std::less
+
+#include "Capitulo6.h"
+
+namespace {
+
+template <typename T>
+void printVector(const std::vector<T>& xs, const char* label) {
+  std::cout << label << ": [";
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (i != 0) std::cout << ", ";
+    std::cout << xs[i];
+  }
+  std::cout << "]\n";
+}
+
+}  // namespace
+
+
+int main() {
+  // Parte original de la demo
+  std::vector<int> base{4, 10, 7, 1, 3, 9};
+  ods::PQ_ComplHeap<int> pq(base);
+
+  std::cout << "PQ_ComplHeap construido con heapify de Floyd\n";
+  printVector(base, "entrada");
+  printVector(pq.data(), "heap interno");
+  std::cout << "getMax() = " << pq.getMax() << "\n\n";
+
+  for (int x : {12, 5, 14}) {
+    pq.insert(x);
+    std::cout << "insert(" << x << ")\n";
+    printVector(pq.data(), "heap interno");
+    std::cout << "max actual = " << pq.getMax() << "\n\n";
+  }
+
+  while (!pq.empty()) {
+    int y = pq.delMax();
+    std::cout << "delMax() -> " << y << "\n";
+    printVector(pq.data(), "heap interno");
+  }
+
+  //Bloque 3 : Demo de conteo con intercambios
+  std::cout << "\nDEMO BLOQUE 3: CONTEO DE INTERCAMBIOS\n";
+  std::vector<int> arr;
+  std::vector<int> secuencia = {40, 10, 70, 30, 90, 20, 80, 60};
+  std::less<int> comp;
+
+  for (int x : secuencia) {
+    arr.push_back(x);
+    // Usamos la función modificada para contar
+    std::size_t swaps = ods::complHeapPercolateUpCount(arr, arr.size() - 1, comp);
+    
+    std::cout << "Insertando: " << x << " | Intercambios: " << swaps << " | Arreglo: [";
+    for (std::size_t i = 0; i < arr.size(); ++i) {
+      if (i != 0) std::cout << ", ";
+      std::cout << arr[i];
+    }
+    std::cout << "] | Propiedad Heap: SI\n";
+  }
+
+  // Bloque 4 : Demo DELMAX con conteo 
+  std::cout << "\nDEMO BLOQUE 4: DELMAX Y CONTEO\n";
+  // Usamos el heap resultante del bloque 3
+  std::vector<int> heap_b4 = {90, 70, 80, 60, 30, 20, 40, 10};
+  
+  while (!heap_b4.empty()) {
+    int max_val = heap_b4.front();
+    heap_b4.front() = heap_b4.back();
+    heap_b4.pop_back();
+    
+    std::cout << "Max eliminado: " << max_val << "\nAntes de reparar: [";
+    for (size_t i = 0; i < heap_b4.size(); ++i) {
+      if (i != 0) std::cout << ", ";
+      std::cout << heap_b4[i];
+    }
+    std::cout << "]\n";
+
+    std::size_t swaps = 0;
+    if (!heap_b4.empty()) {
+      swaps = ods::complHeapPercolateDownCount(heap_b4, heap_b4.size(), 0, comp);
+    }
+
+    std::cout << "Intercambios: " << swaps << "\nDespues de reparar: [";
+    for (size_t i = 0; i < heap_b4.size(); ++i) {
+      if (i != 0) std::cout << ", ";
+      std::cout << heap_b4[i];
+    }
+    std::cout << "]\n------------------------\n";
+  }
+
+  return 0;
+}
+```
+
+* **Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ ./build/sem6_demo_pq_complheap_basico.exe
+
+...
+
+DEMO BLOQUE 4: DELMAX Y CONTEO
+Max eliminado: 90
+Antes de reparar: [10, 70, 80, 60, 30, 20, 40]
+Intercambios: 2
+Despues de reparar: [80, 70, 40, 60, 30, 20, 10]
+------------------------
+Max eliminado: 80
+Antes de reparar: [10, 70, 40, 60, 30, 20]
+Intercambios: 2
+Despues de reparar: [70, 60, 40, 10, 30, 20]
+------------------------
+Max eliminado: 70
+Antes de reparar: [20, 60, 40, 10, 30]
+Intercambios: 2
+Despues de reparar: [60, 30, 40, 10, 20]
+------------------------
+Max eliminado: 60
+Antes de reparar: [20, 30, 40, 10]
+Intercambios: 1
+Despues de reparar: [40, 30, 20, 10]
+------------------------
+Max eliminado: 40
+Antes de reparar: [10, 30, 20]
+Intercambios: 1
+Despues de reparar: [30, 10, 20]
+------------------------
+Max eliminado: 30
+Antes de reparar: [20, 10]
+Intercambios: 0
+Despues de reparar: [20, 10]
+------------------------
+Max eliminado: 20
+Antes de reparar: [10]
+Intercambios: 0
+Despues de reparar: [10]
+------------------------
+Max eliminado: 10
+Antes de reparar: []
+Intercambios: 0
+Despues de reparar: []
+------------------------
+
+
+```
+
+* **Trazado manual de una eliminación:**  
+*(Trazado de la eliminación del 90)*
+
+  * **Estado inicial:** `[90, 70, 80, 60, 30, 20, 40, 10]`
+  * **Remoción:** Se remueve 90 y se mueve 10 a la raíz. El arreglo queda `[10, 70, 80, 60, 30, 20, 40]`.
+  * **Hundimiento en índice 0:** Sus hijos son 70 y 80. El dominante es 80. Como `10 < 80`, se realiza el intercambio.  
+    *Arreglo resultante:* `[80, 70, 10, 60, 30, 20, 40]` (1 intercambio).
+  * **Hundimiento en índice 2:** Sus hijos son 20 y 40. El dominante es 40. Como `10 < 40`, se realiza el intercambio.  
+    *Arreglo resultante:* `[80, 70, 40, 60, 30, 20, 10]` (2 intercambios).
+  * **Fin:** El 10 queda en el índice 6, que constituye una hoja al no tener hijo izquierdo. Termina la reparación.
+
+### Preguntas : 
+
+  * **¿Por qué después de delMax se mueve el último elemento a la raíz?**  
+    Para preservar la propiedad de estructura de árbol binario completo. El último elemento es el único que puede retirarse sin dejar espacios vacíos en el arreglo.
+
+  * **¿Por qué la reparación baja y no sube?**  
+    Porque se trasladó una hoja (un valor comúnmente pequeño) a la raíz (la posición del máximo). Para restaurar el orden jerárquico, este valor debe hundirse hasta encontrar su nivel correspondiente.
+
+  * **¿Cómo se decide entre hijo izquierdo e hijo derecho?**  
+    Se comparan ambos y se elige el mayor. Si se promoviera al menor, el nuevo padre sería más pequeño que su otro hijo, violando la propiedad fundamental del max-heap.
+
+  * **¿Qué pasa si el nodo actual tiene un solo hijo?**  
+    Ese hijo será obligatoriamente el izquierdo debido a las propiedades de completitud. La comparación se hace directamente con él, omitiendo evaluar al derecho porque no existe.
+
+  * **¿Por qué delMax tiene costo $O(\log n)$?**  
+    Porque el nodo colocado en la raíz solo desciende por un único camino lineal hasta llegar, en el peor de los casos, a una hoja. El número máximo de intercambios se encuentra acotado por la altura del árbol ($\approx \log_2 n$).
+
