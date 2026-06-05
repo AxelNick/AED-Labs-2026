@@ -1,0 +1,32 @@
+# Carpetas de compilacion
+build/
+cmake-build-*/
+bin/
+Debug/
+Release/
+x64/
+
+# Ejecutables y binarios
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.dylib
+*.lib
+
+# Archivos de CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Temporales y editores
+__pycache__/
+.pytest_cache/
+.vscode/
+.idea/
+.DS_Store
