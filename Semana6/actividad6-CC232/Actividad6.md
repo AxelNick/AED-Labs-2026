@@ -1068,3 +1068,173 @@ Total Test time (real) =   0.45 sec
   * **¿Por qué esta función es útil en pruebas pero no necesariamente en producción?**  
     Porque operaciones básicas como insertar o eliminar (`delMax`) toman tiempo logarítmico $O(\log n)$. Si tras cada una de estas rutinas se invoca una validación de costo lineal $O(n)$, se degradaría la eficiencia global de la estructura. Por ende, su propósito queda restringido a la verificación de la lógica durante la etapa de desarrollo.
 
+
+## Bloque 6 - Construcción de heap: inserciones sucesivas vs Floyd
+
+Revisamos:
+* `Semana6/include/PQ_ComplHeap_heapifyFloyd.h`
+* `Semana6/include/PQ_ComplHeap_insert.h`
+* `Semana6/demos/demo_heapify_floyd.cpp`
+
+**Entregables del bloque:**
+
+* **Codigo completo del archivo demo_heapify_floyd.cpp con la demostración modificada:**  
+*(Reemplazamos todo el contenido de `Libreria_cc232/Semana6/demos/demo_heapify_floyd.cpp` por este código)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <functional>
+#include "Capitulo6.h"
+
+namespace {
+template <typename T>
+void printVector(const std::vector<T>& xs, const char* label) {
+  std::cout << label << ": [";
+  for (std::size_t i = 0; i < xs.size(); ++i) {
+    if (i != 0) std::cout << ", ";
+    std::cout << xs[i];
+  }
+  std::cout << "]\n";
+}
+
+// Función para validar directamente en la demo
+bool checkHeap(const std::vector<int>& a) {
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    std::size_t l = 2 * i + 1;
+    std::size_t r = 2 * i + 2;
+    if (l < a.size() && a[i] < a[l]) return false;
+    if (r < a.size() && a[i] < a[r]) return false;
+  }
+  return true;
+}
+}  // namespace
+
+int main() {
+  std::vector<int> inicial = {4, 17, 3, 90, 55, 21, 8, 13, 34, 2, 1, 89};
+  std::less<int> comp;
+
+  std::cout << "BLOQUE 6: INSERCIONES VS FLOYD\n";
+  printVector(inicial, "Arreglo inicial");
+  std::cout << "\n";
+
+  // --- CONSTRUCCION A: Inserciones sucesivas ---
+  std::vector<int> heapA;
+  std::size_t swapsA = 0;
+  for (int x : inicial) {
+    heapA.push_back(x);
+    swapsA += ods::complHeapPercolateUpCount(heapA, heapA.size() - 1, comp);
+  }
+  printVector(heapA, "Final por inserciones");
+  std::cout << "Intercambios (A): " << swapsA << "\n";
+  std::cout << "Es heap valido? " << (checkHeap(heapA) ? "SI" : "NO") << "\n\n";
+
+  // --- CONSTRUCCION B: Algoritmo de Floyd ---
+  std::vector<int> heapB = inicial;
+  std::size_t swapsB = 0;
+  if (heapB.size() >= 2) {
+    for (std::size_t i = heapB.size() / 2; i-- > 0;) {
+      swapsB += ods::complHeapPercolateDownCount(heapB, heapB.size(), i, comp);
+    }
+  }
+  printVector(heapB, "Final por Floyd");
+  std::cout << "Intercambios (B): " << swapsB << "\n";
+  std::cout << "Es heap valido? " << (checkHeap(heapB) ? "SI" : "NO") << "\n";
+
+  return 0;
+}
+```
+
+* **Codigo completo del archivo demo_heapify_floyd.cpp con la demostración modificada:**  
+*(Reemplazamos todo el contenido de `Libreria_cc232/Semana6/demos/demo_heapify_floyd.cpp` por este código)*
+
+
+
+* **Codigo completo del archivo PQ_ComplHeap_insert.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <vector>
+
+#include "PQ_ComplHeap_percolateUp.h"
+
+namespace ods {
+
+template <class T, class Compare>
+void complHeapInsert(std::vector<T>& a, const T& e, Compare comp) {
+  a.push_back(e);
+  complHeapPercolateUp(a, a.size() - 1, comp);
+}
+
+}  // namespace ods
+
+```
+
+* **Codigo completo del archivo PQ_ComplHeap_heapifyFloyd.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <cstddef>
+#include <vector>
+
+#include "PQ_ComplHeap_percolateDown.h"
+
+namespace ods {
+
+template <class T, class Compare>
+void complHeapHeapifyFloyd(std::vector<T>& a, Compare comp) {
+  if (a.size() < 2) {
+    return;
+  }
+  for (std::size_t i = a.size() / 2; i-- > 0;) {
+    complHeapPercolateDown(a, a.size(), i, comp);
+  }
+}
+
+}  // namespace ods
+
+```
+
+* **Salida de la demostración (Tabla comparativa simulada en consola):**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_heapify_floyd.exe
+BLOQUE 6: INSERCIONES VS FLOYD
+Arreglo inicial: [4, 17, 3, 90, 55, 21, 8, 13, 34, 2, 1, 89]
+
+Final por inserciones: [90, 55, 89, 34, 17, 21, 8, 4, 13, 2, 1, 3]
+Intercambios (A): 9
+Es heap valido? SI
+
+Final por Floyd: [90, 55, 89, 34, 4, 21, 8, 13, 17, 2, 1, 3]
+Intercambios (B): 7
+Es heap valido? SI
+
+```
+
+* **Explicación de complejidad:**  
+Construir un heap con inserciones cuesta $O(n \log n)$ porque la mayoría de los nodos (las hojas) se insertan cuando el árbol ya alcanzó su máxima altura, obligándolos a subir por ramas largas. En cambio, Floyd cuesta $O(n)$ porque hace el trabajo al revés: procesa los nodos bajándolos (`percolateDown`). 
+
+La mayoría de los nodos son hojas que bajan 0 veces, el nivel superior baja como máximo 1 vez, y solo la raíz baja la altura completa. La suma de esta progresión decreciente da como resultado un límite lineal estricto de $O(n)$.
+
+### Preguntas :
+
+  * **¿Por qué ambos resultados pueden ser heaps válidos aunque sus arreglos finales no sean idénticos?**  
+    El heap es un orden parcial. Solo exige que un padre sea mayor o igual a sus hijos directos. No existe ninguna regla que ordene a los "hermanos" o a nodos en distintas ramas, por lo que una misma colección de datos puede formar múltiples heaps estructuralmente válidos.
+
+  * **¿Por qué insertar $n$ elementos puede costar $O(n \log n)$?**  
+    Insertar un elemento usando `percolateUp` cuesta $O(\log n)$ en el peor caso. Repetir esto $n$ veces desde un arreglo vacío multiplica los costos, siendo especialmente ineficiente al final cuando el árbol es más profundo y posee más niveles.
+
+  * **¿Por qué Floyd puede construir el heap en $O(n)$?**  
+    Porque invierte el esfuerzo distributivo. El método `percolateDown` realiza más trabajo solo para los nodos cerca de la raíz (que estructuralmente son muy pocos) y casi nada de trabajo para los nodos inferiores (que son la gran mayoría). Matemáticamente la serie de estas operaciones converge a un límite de $O(n)$.
+
+  * **¿Qué nodos procesa Floyd primero?**  
+    Comienza exactamente en el último nodo interno (el padre de la última hoja, ubicado en el índice `n/2 - 1`) y avanza en sentido inverso (de derecha a izquierda, de abajo hacia arriba) hasta alcanzar la raíz (índice 0).
+
+  * **¿Por qué Floyd no necesita llamar a percolateDown desde las hojas?**  
+    Una hoja carece de hijos hacia donde bajar. Cualquier nodo individual aislado se considera un sub-heap válido por sí mismo, por lo que intentar repararlo constituiría una ejecución redundante de ciclos.
