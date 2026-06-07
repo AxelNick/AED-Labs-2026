@@ -8,3 +8,13 @@
 
  * **Día 3 (06/06/2026):** Modificación del Heap para almacenar `std::pair<int, int>` permitiendo vincular con el ID del infante. Implementación de la función `limpiar_guarderia` utilizando el concepto de **Lazy Deletion** para depurar en $O(\log N)$ las cimas de los Heaps que contienen niños ya transferidos. 
  Integración de `std::multiset` como estructura secundaria auxiliar para mantener el mínimo global de los máximos en tiempo logarítmico. Cierre del ciclo de procesamiento en `main.cpp`.
+
+ * **Día 4 (07/06/2026):** Implementación de las pruebas automatizadas en `test_smart_infants.cpp`. Cubriendo los 6 escenarios exigidos por la rúbrica: 
+  1. Caso mínimo garantizado.
+  2. Comportamiento ante guarderías vacías (colapso de Heaps).
+  3. Manejo estable de infantes con fuerza duplicada.
+  4. Simulación extrema de verificación manual.
+  5. Benchmark de rendimiento validando la optimización logarítmica frente a una solución ingenua en tiempo $O(N)$.
+  6. Verificación explícita del invariante principal (Lazy Deletion para la limpieza de nodos basura).
+  Adicionalmente, se actualizó el archivo `CMakeLists.txt` para integrar el ecosistema CTest, y se documentaron los resultados en los registros de evidencia textual (`tests_pc3.txt`, `casos_borde.txt` y `ejecucion_pc3.txt`). 
+  Finalmente, se creó el archivo auxiliar `input.txt` para permitir la inyección rápida y automatizada del caso de prueba de AtCoder en la terminal.

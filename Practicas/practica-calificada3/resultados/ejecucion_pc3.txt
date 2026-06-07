@@ -1,9 +1,10 @@
-EVIDENCIA DE EJECUCIÓN: ATCODER ABC170 E
 
-Comando ejecutado:
-./build/main.exe
+REPORTE DE EJECUCIÓN : ATCODER ABC170 E - SMART INFANTS
 
-Entrada (N=6 infantes, Q=3 transferencias):
+Comando de ejecución:
+./build/main.exe < input.txt
+
+[ENTRADA] - Caso de prueba oficial (N=6 infantes, Q=3 transferencias)
 6 3
 8 1
 6 2
@@ -15,13 +16,29 @@ Entrada (N=6 infantes, Q=3 transferencias):
 2 1
 1 2
 
-Salida del programa (Mínimo de los máximos tras cada transferencia):
+[SALIDA OBTENIDA] - Mínimo de los máximos globales:
 6
 2
 6
 
-Explicación del caso validado:
-- Inicialmente: G1={8,1}, G2={6,2}, G3={9,1}. Máximos: {8,6,9}. Mínimo = 6.
-- Transf. 1 (Infante 4 a G3): G1={8}, G2={6,2}, G3={9,1,1}. Máximos: {8,6,9}. Mínimo = 6.
-- Transf. 2 (Infante 2 a G1): G1={8,6}, G2={2}, G3={9,1,1}. Máximos: {8,2,9}. Mínimo = 2.
-- Transf. 3 (Infante 1 a G2): G1={6}, G2={8,2}, G3={9,1,1}. Máximos: {6,8,9}. Mínimo = 6.
+[TRAZA DE VALIDACIÓN LÓGICA]
+
+ESTADO INICIAL:
+G1={8, 1} | G2={6, 2} | G3={9, 1}
+-> Máximos válidos: {8, 6, 9}
+-> Mínimo global inicial: 6 (No se imprime según el formato)
+
+TRANSFERENCIA 1: Infante 4 (fuerza 1) se mueve a G3
+-> G1={8} | G2={6, 2} | G3={9, 1, 1}
+-> Máximos válidos: {8, 6, 9}
+-> Mínimo global: 6 [OK]
+
+TRANSFERENCIA 2: Infante 2 (fuerza 6) se mueve a G1
+-> G1={8, 6} | G2={2} | G3={9, 1, 1}
+-> Máximos válidos: {8, 2, 9}
+-> Mínimo global: 2 [OK]
+
+TRANSFERENCIA 3: Infante 1 (fuerza 8) se mueve a G2.
+-> G1={6} | G2={8, 2} | G3={9, 1, 1}
+-> Máximos válidos: {6, 8, 9}
+-> Mínimo global: 6 [OK]
