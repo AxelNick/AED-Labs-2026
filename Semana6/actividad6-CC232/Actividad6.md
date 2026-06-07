@@ -1777,3 +1777,386 @@ Secuencia de prioridad (delMax): 11 10 9 8 7 3 2 1
 
   * **¿Qué ventaja conceptual tiene un heap izquierdista frente a un heap binario completo?**  
     Su velocidad para fusionarse ,unir dos heaps binarios normales en un arreglo obliga a reconstruirlos tomando $O(n)$. Un heap izquierdista, al concentrar sus espacios vacíos en el lado derecho (que es un camino muy corto), permite fusionarlos en apenas $O(\log n)$
+
+
+## Bloque 9 - Huffman: modificación de desempate y caso de un símbolo
+
+Revisamos:
+* `Semana6/include/Huffman_PQ.h`
+* `Semana6/include/Huffman_PQ_generateTree.h`
+* `Semana6/demos/demo_huffman.cpp`
+
+
+**Entregables del bloque:**
+
+* **Código completo de la demostración agregada (demo_huffman.cpp) :**  
+*(Reemplaza todo el contenido en Libreria_cc232/Semana6/demos/demo_huffman.cpp con este código que procesa los dos casos exigidos)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include <string>
+
+#include "Capitulo6.h"
+
+void procesarAlfabeto(const std::vector<ods::HuffmanSymbol>& alphabet, const std::string& titulo) {
+  std::cout << "=== " << titulo << " ===\n";
+
+  // 1. Mostrar fusiones
+  const auto steps = ods::huffmanBuildTrace(alphabet);
+  std::cout << "Fusiones:\n";
+  for (const auto& s : steps) {
+    std::cout << "  (" << s.leftLabel << ':' << s.leftFrequency << ") + ("
+              << s.rightLabel << ':' << s.rightFrequency << ") -> "
+              << s.mergedFrequency << '\n';
+  }
+
+  // 2. Generar códigos 
+  const auto codes = ods::huffmanGenerateCodes(alphabet);
+  
+  // 3. Se imprime la tabla
+  std::cout << "\nTabla de codigos:\n";
+  std::cout << std::left << std::setw(10) << "Simbolo" 
+            << std::setw(15) << "Frecuencia" 
+            << std::setw(15) << "Codigo" 
+            << "Longitud\n";
+  std::cout << std::string(50, '-') << '\n';
+
+  int totalPonderado = 0;
+  for (const auto& s : alphabet) {
+    std::string code = codes.at(s.symbol);
+    int longitud = code.length();
+    totalPonderado += s.frequency * longitud;
+    std::cout << std::left << std::setw(10) << s.symbol 
+              << std::setw(15) << s.frequency 
+              << std::setw(15) << code 
+              << longitud << '\n';
+  }
+
+  std::cout << std::string(50, '-') << '\n';
+  std::cout << "Longitud total ponderada: " << totalPonderado << '\n';
+  std::cout << "Prefijo libre (valido)? : " << (ods::huffmanIsPrefixFree(codes) ? "SI" : "NO") << "\n\n";
+}
+
+int main() {
+  // Parte 1: Alfabeto con empates de frecuencia
+  const std::vector<ods::HuffmanSymbol> alphabet_ties = {
+      {'A', 5}, {'B', 5}, {'C', 10}, {'D', 10}, {'E', 20}
+  };
+  procesarAlfabeto(alphabet_ties, "ALFABETO CON DESEMPATES");
+
+  // Parte 2: Caso extremo de un solo símbolo
+  const std::vector<ods::HuffmanSymbol> alphabet_single = {
+      {'X', 100}
+  };
+  procesarAlfabeto(alphabet_single, "CASO EXTREMO: UN SOLO SIMBOLO");
+
+  return 0;
+}
+```
+
+* **Codigo completo del archivo Huffman_PQ.h**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "PQ_ComplHeap.h"
+#include "PQ_LeftHeap.h"
+
+namespace ods {
+
+struct HuffmanSymbol {
+  char symbol{};
+  int frequency{};
+};
+
+struct HuffmanNode {
+  char symbol{};
+  int frequency{};
+  std::shared_ptr<HuffmanNode> left{};
+  std::shared_ptr<HuffmanNode> right{};
+
+  HuffmanNode(char s, int f) : symbol(s), frequency(f) {}
+  HuffmanNode(std::shared_ptr<HuffmanNode> a, std::shared_ptr<HuffmanNode> b)
+      : symbol('\0'),
+        frequency(a->frequency + b->frequency),
+        left(std::move(a)),
+        right(std::move(b)) {}
+
+  bool leaf() const noexcept { return !left && !right; }
+};
+
+struct HuffmanBuildStep {
+  int leftFrequency{};
+  int rightFrequency{};
+  int mergedFrequency{};
+  std::string leftLabel;
+  std::string rightLabel;
+};
+
+struct HuffmanLowerFrequencyFirst {
+  bool operator()(const std::shared_ptr<HuffmanNode>& a,
+                  const std::shared_ptr<HuffmanNode>& b) const {
+    if (a->frequency != b->frequency) {
+      return a->frequency > b->frequency;
+    }
+    return a->symbol > b->symbol;
+  }
+};
+
+inline std::string huffmanNodeLabel(const std::shared_ptr<HuffmanNode>& u) {
+  if (!u) return "null";
+  if (u->leaf()) return std::string(1, u->symbol);
+  return "*";
+}
+
+template <class PriorityQueue>
+PriorityQueue huffmanMakeForest(const std::vector<HuffmanSymbol>& alphabet) {
+  PriorityQueue pq;
+  for (const auto& s : alphabet) {
+    if (s.frequency > 0) {
+      pq.insert(std::make_shared<HuffmanNode>(s.symbol, s.frequency));
+    }
+  }
+  if (pq.empty()) {
+    throw std::invalid_argument("Huffman requiere simbolos con frecuencia positiva");
+  }
+  return pq;
+}
+
+template <class PriorityQueue>
+std::shared_ptr<HuffmanNode> huffmanGenerateTreeFromForest(PriorityQueue forest) {
+  while (forest.size() > 1) {
+    auto a = forest.delMax();
+    auto b = forest.delMax();
+    forest.insert(std::make_shared<HuffmanNode>(a, b));
+  }
+  return forest.delMax();
+}
+
+template <class PriorityQueue>
+std::vector<HuffmanBuildStep> huffmanBuildTraceWith(const std::vector<HuffmanSymbol>& alphabet) {
+  PriorityQueue forest = huffmanMakeForest<PriorityQueue>(alphabet);
+  std::vector<HuffmanBuildStep> steps;
+  while (forest.size() > 1) {
+    auto a = forest.delMax();
+    auto b = forest.delMax();
+    steps.push_back({a->frequency, b->frequency, a->frequency + b->frequency,
+                     huffmanNodeLabel(a), huffmanNodeLabel(b)});
+    forest.insert(std::make_shared<HuffmanNode>(a, b));
+  }
+  return steps;
+}
+
+template <class PriorityQueue>
+std::shared_ptr<HuffmanNode> huffmanGenerateTreeWith(const std::vector<HuffmanSymbol>& alphabet) {
+  return huffmanGenerateTreeFromForest(huffmanMakeForest<PriorityQueue>(alphabet));
+}
+
+inline std::shared_ptr<HuffmanNode> huffmanGenerateTree(const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_ComplHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanGenerateTreeWith<PQType>(alphabet);
+}
+
+inline std::shared_ptr<HuffmanNode> huffmanGenerateTreeLeftHeap(
+    const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_LeftHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanGenerateTreeWith<PQType>(alphabet);
+}
+
+inline std::vector<HuffmanBuildStep> huffmanBuildTrace(const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_ComplHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanBuildTraceWith<PQType>(alphabet);
+}
+
+inline std::vector<HuffmanBuildStep> huffmanBuildTraceLeftHeap(
+    const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_LeftHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanBuildTraceWith<PQType>(alphabet);
+}
+
+inline void huffmanCollectCodes(const std::shared_ptr<HuffmanNode>& u,
+                                const std::string& prefix,
+                                std::unordered_map<char, std::string>& out) {
+  if (!u) return;
+  if (u->leaf()) {
+    out[u->symbol] = prefix.empty() ? "0" : prefix;
+    return;
+  }
+  huffmanCollectCodes(u->left, prefix + "0", out);
+  huffmanCollectCodes(u->right, prefix + "1", out);
+}
+
+template <class PriorityQueue>
+std::unordered_map<char, std::string> huffmanGenerateCodesWith(
+    const std::vector<HuffmanSymbol>& alphabet) {
+  std::unordered_map<char, std::string> codes;
+  huffmanCollectCodes(huffmanGenerateTreeWith<PriorityQueue>(alphabet), "", codes);
+  return codes;
+}
+
+inline std::unordered_map<char, std::string> huffmanGenerateCodes(
+    const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_ComplHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanGenerateCodesWith<PQType>(alphabet);
+}
+
+inline std::unordered_map<char, std::string> huffmanGenerateCodesLeftHeap(
+    const std::vector<HuffmanSymbol>& alphabet) {
+  using PQType = PQ_LeftHeap<std::shared_ptr<HuffmanNode>, HuffmanLowerFrequencyFirst>;
+  return huffmanGenerateCodesWith<PQType>(alphabet);
+}
+
+inline std::string huffmanEncode(const std::string& text,
+                                 const std::unordered_map<char, std::string>& codes) {
+  std::string bits;
+  for (char c : text) {
+    auto it = codes.find(c);
+    if (it == codes.end()) {
+      throw std::invalid_argument("Caracter sin codigo Huffman");
+    }
+    bits += it->second;
+  }
+  return bits;
+}
+
+inline std::string huffmanDecode(const std::string& bits,
+                                 const std::shared_ptr<HuffmanNode>& root) {
+  if (!root) return {};
+  if (root->leaf()) {
+    return std::string(bits.size(), root->symbol);
+  }
+
+  std::string out;
+  auto u = root;
+  for (char bit : bits) {
+    if (bit == '0') {
+      u = u->left;
+    } else if (bit == '1') {
+      u = u->right;
+    } else {
+      throw std::invalid_argument("La cadena codificada solo puede contener 0 y 1");
+    }
+    if (!u) {
+      throw std::invalid_argument("Secuencia Huffman invalida");
+    }
+    if (u->leaf()) {
+      out.push_back(u->symbol);
+      u = root;
+    }
+  }
+  if (u != root) {
+    throw std::invalid_argument("La cadena codificada termina a mitad de un codigo");
+  }
+  return out;
+}
+
+inline bool huffmanIsPrefixFree(const std::unordered_map<char, std::string>& codes) {
+  for (const auto& [ca, sa] : codes) {
+    for (const auto& [cb, sb] : codes) {
+      if (ca == cb) continue;
+      if (sb.rfind(sa, 0) == 0) return false;
+    }
+  }
+  return true;
+}
+
+inline int huffmanWeightedPathLength(const std::vector<HuffmanSymbol>& alphabet,
+                                     const std::unordered_map<char, std::string>& codes) {
+  int total = 0;
+  for (const auto& s : alphabet) {
+    auto it = codes.find(s.symbol);
+    if (s.frequency > 0 && it != codes.end()) {
+      total += s.frequency * static_cast<int>(it->second.size());
+    }
+  }
+  return total;
+}
+
+}  // namespace ods
+
+```
+
+* **Codigo completo del archivo Huffman_PQ_generateTree.h**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include "Huffman_PQ.h"
+```
+
+* **Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_huffman
+[2/2] Linking CXX executable Semana6\sem6_demo_huffman.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_huffman.exe
+=== ALFABETO CON DESEMPATES ===
+Fusiones:
+  (A:5) + (B:5) -> 10
+  (*:10) + (C:10) -> 20
+  (D:10) + (*:20) -> 30
+  (E:20) + (*:30) -> 50
+
+Tabla de codigos:
+Simbolo   Frecuencia     Codigo         Longitud
+--------------------------------------------------
+A         5              1100           4
+B         5              1101           4
+C         10             111            3
+D         10             10             2
+E         20             0              1
+--------------------------------------------------
+Longitud total ponderada: 110
+Prefijo libre (valido)? : SI
+
+=== CASO EXTREMO: UN SOLO SIMBOLO ===
+Fusiones:
+
+Tabla de codigos:
+Simbolo   Frecuencia     Codigo         Longitud
+--------------------------------------------------
+X         100            0              1
+--------------------------------------------------
+Longitud total ponderada: 100
+Prefijo libre (valido)? : SI
+
+```
+
+### Preguntas : 
+
+* **¿Por qué Huffman necesita una cola de prioridad?**  
+  Permite extraer rápidamente los dos nodos con menor frecuencia e insertar el nuevo nodo fusionado. Usar un Min-Heap reduce el tiempo de estas operaciones a $O(\log n)$.
+
+* **¿Qué elementos se extraen repetidamente?**  
+  Se extraen siempre los dos nodos con las frecuencias más bajas del bosque actual, ya sean símbolos originales (hojas) o subárboles ya fusionados (nodos internos).
+
+* **¿Qué nodo se vuelve a insertar?**  
+  Se inserta el nuevo nodo padre formado por los dos extraídos. Este nodo no representa ningún símbolo (internamente usa '\0') y su frecuencia es la suma exacta de sus hijos.
+
+* **¿Por qué el caso de un solo símbolo requiere cuidado especial?**  
+  El algoritmo estándar fusiona nodos mientras haya más de uno. Con un solo símbolo, el bucle no se ejecuta y queda una raíz aislada. Si no forzamos la asignación de un código (como "0"), se generaría un código vacío "", lo cual invalidaría la decodificación.
+
+* **¿Qué significa que el conjunto de códigos sea libre de prefijos?**  
+  Significa que ningún código es el inicio exacto de otro. Por ejemplo, si "A" es 10, ningún otro símbolo puede empezar con 10. Esto garantiza que una cadena de bits se decodifique de forma única y secuencial sin usar separadores.
+
+* **¿Cómo afecta el desempate a la forma del árbol?**  
+  Cambia el orden en que se agrupan los nodos. Al desempatar con diferentes criterios, se fusionan distintos subárboles en tiempos diferentes, modificando la estructura del árbol resultante y los códigos binarios asignados a cada símbolo.
+
+* **¿El desempate cambia necesariamente la longitud total ponderada? Justifica.**  
+  No ya que aunque la estructura del árbol y los códigos cambien, Huffman agrupa siempre las dos frecuencias más bajas disponibles. Esto garantiza que la longitud total ponderada (el costo de almacenamiento final) siga siendo matemáticamente óptima y mínima.
+
