@@ -1790,7 +1790,7 @@ Revisamos:
 **Entregables del bloque:**
 
 * **Código completo de la demostración agregada (demo_huffman.cpp) :**  
-*(Reemplaza todo el contenido en Libreria_cc232/Semana6/demos/demo_huffman.cpp con este código que procesa los dos casos exigidos)*
+*(Se reemplazara todo el contenido en Libreria_cc232/Semana6/demos/demo_huffman.cpp con este código que procesa los dos casos exigidos)*
 
 ```cpp
 #include <iostream>
@@ -2160,3 +2160,729 @@ Prefijo libre (valido)? : SI
 * **¿El desempate cambia necesariamente la longitud total ponderada? Justifica.**  
   No ya que aunque la estructura del árbol y los códigos cambien, Huffman agrupa siempre las dos frecuencias más bajas disponibles. Esto garantiza que la longitud total ponderada (el costo de almacenamiento final) siga siendo matemáticamente óptima y mínima.
 
+
+## Bloque 10 - Treap: modificación de código, rotaciones e invariantes
+
+Revisamos:
+* `Semana6/include/Treap.h`
+* `Semana6/demos/demo_treap_basico.cpp`
+* `Semana6/pruebas_publicas/test_public_week6.cpp`
+* `Semana6/pruebas_internas/test_internal_week6.cpp`
+
+### Parte A - Construcción determinística con prioridades fijas
+
+
+**Entregables del bloque:**
+
+* **Código completo de la demostración modificada (demo_treap_basico.cpp) :**  
+*(Se reemplazara todo el contenido en Libreria_cc232/Semana6/demos/demo_treap_basico.cpp con este código que inyecta los pares exactos que exige la rúbricas)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <utility>
+
+#include "Capitulo6.h"
+
+int main() {
+  ods::Treap<int> t(232);
+  
+  // Secuencia de pares {clave, prioridad}
+  std::vector<std::pair<int, int>> sequence = {
+      {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
+  };
+
+  std::cout << "CONSTRUCCION DETERMINISTICA DE TREAP\n";
+  
+  for (const auto& p : sequence) {
+    int key = p.first;
+    int prio = p.second;
+    
+    t.addWithPriority(key, prio);
+
+    std::cout << "------------------------------------------\n";
+    std::cout << "Insertado -> Clave: " << key << " | Prioridad: " << prio << "\n";
+    
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\n";
+
+    std::cout << "Por niveles  : ";
+    for (int k : t.levelOrderKeys()) std::cout << k << " ";
+    std::cout << "\n";
+
+    std::cout << "Raiz actual  : " << t.root()->key << "\n";
+    std::cout << "Validaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+
+  std::cout << "==========================================\n";
+  std::cout << "ARBOL FINAL (ASCII ART):\n";
+  std::cout << t << "\n";
+
+  return 0;
+}
+```
+* **Codigo completo del archivo Treap.h**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class Treap {
+ public:
+  struct Node {
+    T key{};
+    std::uint64_t priority{0};
+    Node* parent{nullptr};
+    Node* left{nullptr};
+    Node* right{nullptr};
+
+    Node() = default;
+    Node(const T& value, std::uint64_t p, Node* par = nullptr)
+        : key(value), priority(p), parent(par) {}
+
+    bool isLeftChild() const { return parent != nullptr && parent->left == this; }
+    bool isRightChild() const { return parent != nullptr && parent->right == this; }
+  };
+
+  Treap() : rng_(232) {}
+  explicit Treap(std::uint64_t seed) : rng_(seed) {}
+  explicit Treap(Compare comp, std::uint64_t seed = 232) : comp_(std::move(comp)), rng_(seed) {}
+
+  Treap(const Treap&) = delete;
+  Treap& operator=(const Treap&) = delete;
+
+  Treap(Treap&& other) noexcept { swap(other); }
+  Treap& operator=(Treap&& other) noexcept {
+    if (this != &other) {
+      clear();
+      swap(other);
+    }
+    return *this;
+  }
+
+  ~Treap() { clear(); }
+
+  void clear() {
+    destroy(root_);
+    root_ = nullptr;
+    size_ = 0;
+  }
+
+  void swap(Treap& other) noexcept {
+    std::swap(root_, other.root_);
+    std::swap(size_, other.size_);
+    std::swap(comp_, other.comp_);
+    std::swap(rng_, other.rng_);
+    std::swap(priorityCounter_, other.priorityCounter_);
+  }
+
+  Node* root() const noexcept { return root_; }
+  std::size_t size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  Node* findLast(const T& x) const {
+    Node* w = root_;
+    Node* prev = nullptr;
+    while (w != nullptr) {
+      prev = w;
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return prev;
+  }
+
+  Node* findEQ(const T& x) const {
+    Node* w = root_;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return nullptr;
+  }
+
+  Node* lowerBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return candidate;
+  }
+
+  Node* upperBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else {
+        w = w->right;
+      }
+    }
+    return candidate;
+  }
+
+  bool contains(const T& x) const { return findEQ(x) != nullptr; }
+
+  bool add(const T& x) { return addWithPriority(x, nextPriority()); }
+
+  bool addWithPriority(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return false;
+    }
+    bubbleUp(u);
+    return true;
+  }
+
+  bool remove(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return false;
+    trickleDown(u);
+    splice(u);
+    delete u;
+    return true;
+  }
+
+  void rotateLeft(Node* u) {
+    if (!u || !u->right) return;
+    Node* w = u->right;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->right = w->left;
+    if (u->right) u->right->parent = u;
+    w->left = u;
+    u->parent = w;
+  }
+
+  void rotateRight(Node* u) {
+    if (!u || !u->left) return;
+    Node* w = u->left;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->left = w->right;
+    if (u->left) u->left->parent = u;
+    w->right = u;
+    u->parent = w;
+  }
+
+  void bubbleUp(Node* u) {
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+    }
+    if (!u->parent) root_ = u;
+  }
+
+  void trickleDown(Node* u) {
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+    }
+  }
+
+  std::vector<T> inorderKeys() const {
+    std::vector<T> out;
+    inorder(root_, out);
+    return out;
+  }
+
+  std::vector<T> levelOrderKeys() const {
+    std::vector<T> out;
+    std::queue<Node*> q;
+    if (root_) q.push(root_);
+    while (!q.empty()) {
+      Node* u = q.front();
+      q.pop();
+      out.push_back(u->key);
+      if (u->left) q.push(u->left);
+      if (u->right) q.push(u->right);
+    }
+    return out;
+  }
+
+  std::string asciiArt() const {
+    if (!root_) return "(treap vacio)\n";
+    std::vector<std::string> lines;
+    buildAscii(root_, "", true, lines);
+    std::ostringstream out;
+    for (const auto& line : lines) out << line << '\n';
+    return out.str();
+  }
+
+  bool isBST() const { return isBST(root_, nullptr, nullptr) && checkParents(root_, nullptr); }
+  bool isHeapByPriority() const { return isHeapByPriority(root_); }
+  bool isTreap() const { return isBST() && isHeapByPriority(); }
+
+ private:
+  Node* root_{nullptr};
+  std::size_t size_{0};
+  Compare comp_{};
+  std::mt19937_64 rng_;
+  std::uint64_t priorityCounter_{0};
+
+  std::uint64_t nextPriority() {
+    std::uint64_t raw = rng_();
+    return (raw << 16) ^ (++priorityCounter_);
+  }
+
+  bool addNode(Node* u) {
+    u->left = nullptr;
+    u->right = nullptr;
+    Node* p = findLast(u->key);
+    if (!p) {
+      root_ = u;
+      u->parent = nullptr;
+      ++size_;
+      return true;
+    }
+    if (comp_(u->key, p->key)) {
+      if (p->left) return false;
+      p->left = u;
+    } else if (comp_(p->key, u->key)) {
+      if (p->right) return false;
+      p->right = u;
+    } else {
+      return false;
+    }
+    u->parent = p;
+    ++size_;
+    return true;
+  }
+
+  void splice(Node* u) {
+    Node* s = u->left ? u->left : u->right;
+    if (u == root_) {
+      root_ = s;
+    } else if (u->isLeftChild()) {
+      u->parent->left = s;
+    } else {
+      u->parent->right = s;
+    }
+    if (s) s->parent = u->parent;
+    --size_;
+  }
+
+  static void destroy(Node* u) {
+    if (!u) return;
+    destroy(u->left);
+    destroy(u->right);
+    delete u;
+  }
+
+  static void inorder(Node* u, std::vector<T>& out) {
+    if (!u) return;
+    inorder(u->left, out);
+    out.push_back(u->key);
+    inorder(u->right, out);
+  }
+
+  bool isBST(Node* u, const T* low, const T* high) const {
+    if (!u) return true;
+    if (low && !comp_(*low, u->key)) return false;
+    if (high && !comp_(u->key, *high)) return false;
+    return isBST(u->left, low, &u->key) && isBST(u->right, &u->key, high);
+  }
+
+  static bool checkParents(Node* u, Node* parent) {
+    if (!u) return true;
+    if (u->parent != parent) return false;
+    return checkParents(u->left, u) && checkParents(u->right, u);
+  }
+
+  static bool isHeapByPriority(Node* u) {
+    if (!u) return true;
+    if (u->left && u->left->priority < u->priority) return false;
+    if (u->right && u->right->priority < u->priority) return false;
+    return isHeapByPriority(u->left) && isHeapByPriority(u->right);
+  }
+
+  static std::string nodeLabel(const Node* u) {
+    std::ostringstream out;
+    out << u->key << "|p=" << u->priority;
+    return out.str();
+  }
+
+  static void buildAscii(const Node* node, const std::string& prefix, bool isTail,
+                         std::vector<std::string>& lines) {
+    if (!node) return;
+    if (node->right) {
+      buildAscii(node->right, prefix + (isTail ? "│   " : "    "), false, lines);
+    }
+    lines.push_back(prefix + (isTail ? "└── " : "┌── ") + nodeLabel(node));
+    if (node->left) {
+      buildAscii(node->left, prefix + (isTail ? "    " : "│   "), true, lines);
+    }
+  }
+};
+
+template <class T, class Compare>
+inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
+  out << t.asciiArt();
+  return out;
+}
+
+}  // namespace ods
+```
+
+* **Codigo completo del archivo test_public_week6.cpp**  
+*(El archivo no fue modificado para este bloque pero previamente ya estaba)*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // --- MOD-A6-B5: PRUEBAS DE VALIDACIÓN isValidHeap ---
+  ods::PQ_ComplHeap<int> pqEmpty;
+  assert(pqEmpty.isValidHeap()); // 1. Heap vacío
+
+  ods::PQ_ComplHeap<int> pqOne;
+  pqOne.insert(42);
+  assert(pqOne.isValidHeap()); // 2. Heap con un elemento
+
+  ods::PQ_ComplHeap<int> pqRep;
+  pqRep.insert(7); pqRep.insert(7); pqRep.insert(7);
+  assert(pqRep.isValidHeap()); // 3. Heap con elementos repetidos
+
+  ods::PQ_ComplHeap<int> pqIns;
+  for (int x : {15, 2, 8, 1, 99, 4}) pqIns.insert(x);
+  assert(pqIns.isValidHeap()); // 4. Heap construido por inserciones
+
+  ods::PQ_ComplHeap<int> h{4, 10, 7, 1, 3, 9};
+  assert(h.isValidHeap()); // 5. Heap construido por inicializador (heapify)
+  assert(h.getMax() == 10);
+  
+  h.insert(12);
+  assert(h.isValidHeap()); 
+  
+  assert(h.delMax() == 12);
+  assert(h.isValidHeap()); // 6. Heap después de inserciones y extracciones
+  // ----------------------------------------------------
+
+  // Pruebas de ordenamiento
+  std::vector<int> xs{5, 1, 8, 3, 2};
+  ods::heapSort(xs);
+  assert((xs == std::vector<int>{1, 2, 3, 5, 8}));
+
+  // Pruebas de Leftist Heap
+  ods::PQ_LeftHeap<int> a{7, 2, 9};
+  ods::PQ_LeftHeap<int> b{1, 8, 3};
+  ods::leftHeapMerge(a, b);
+  assert(b.empty());
+  assert(a.size() == 6);
+  assert(a.isLeftistHeap());
+  assert(a.getMax() == 9);
+
+  // Pruebas de Codificación Huffman
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12},
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes = ods::huffmanGenerateCodes(s);
+  const auto tree = ods::huffmanGenerateTree(s);
+  const std::string msg = "face";
+  const std::string bits = ods::huffmanEncode(msg, codes);
+  assert(ods::huffmanDecode(bits, tree) == msg);
+  assert(ods::huffmanIsPrefixFree(codes));
+
+  // Pruebas de Binary Search Tree (Rotaciones)
+  ods::BinarySearchTree<int> bst;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7}) {
+    bst.add(x);
+  }
+  const auto before = bst.inorder();
+  bst.rotateRight(bst.root());
+  bst.rotateLeft(bst.root());
+  const auto after = bst.inorder();
+  assert(before == after);
+  assert(bst.isBST());
+
+  // Pruebas de Treap
+  ods::Treap<int> treap(123);
+  assert(treap.addWithPriority(8, 80));
+  assert(treap.addWithPriority(3, 60));
+  assert(treap.addWithPriority(10, 90));
+  assert(treap.addWithPriority(1, 50));
+  assert(treap.addWithPriority(6, 70));
+  assert(treap.isTreap());
+  assert(!treap.addWithPriority(6, 71));
+  assert(treap.contains(3));
+  assert(treap.remove(3));
+  assert(!treap.contains(3));
+  assert(treap.isTreap());
+
+  return 0;
+}
+```
+
+* **Codigo completo del archivo test_internal_week6.cpp**  
+*(El archivo no fue modificado para este bloque pero previamente ya estaba)*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // --- MOD-A6-B5: PRUEBAS DE VALIDACIÓN isValidHeap ---
+  ods::PQ_ComplHeap<int> pqEmpty;
+  assert(pqEmpty.isValidHeap()); // 1. Heap vacío
+
+  ods::PQ_ComplHeap<int> pqOne;
+  pqOne.insert(42);
+  assert(pqOne.isValidHeap()); // 2. Heap con un elemento
+
+  ods::PQ_ComplHeap<int> pqRep;
+  pqRep.insert(7); pqRep.insert(7); pqRep.insert(7);
+  assert(pqRep.isValidHeap()); // 3. Heap con elementos repetidos
+
+  ods::PQ_ComplHeap<int> pqIns;
+  for (int x : {15, 2, 8, 1, 99, 4}) pqIns.insert(x);
+  assert(pqIns.isValidHeap()); // 4. Heap construido por inserciones
+
+  ods::PQ_ComplHeap<int> pqHeapify(std::vector<int>{15, 2, 8, 1, 99, 4});
+  assert(pqHeapify.isValidHeap()); // 5. Heap construido por heapify
+  
+  pqHeapify.delMax();
+  pqHeapify.delMax();
+  assert(pqHeapify.isValidHeap()); // 6. Heap después de varias llamadas a delMax
+  // ----------------------------------------------------
+
+  // PQ_ComplHeap: secuencia completa de extracciones.
+  ods::PQ_ComplHeap<int> pq;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13, 14}) {
+    pq.insert(x);
+    assert(pq.isValidHeap()); // Validación tras cada inserción
+  }
+  
+  std::vector<int> out;
+  while (!pq.empty()) {
+    out.push_back(pq.delMax());
+    assert(pq.empty() || pq.isValidHeap()); // Validación tras cada extracción
+  }
+  assert((out == std::vector<int>{14, 14, 13, 10, 8, 7, 6, 4, 3, 1}));
+
+  // Leftist heap: merge e invariantes.
+  ods::PQ_LeftHeap<int> a{20, 7, 18, 3};
+  ods::PQ_LeftHeap<int> b{19, 8, 4, 1, 17};
+  a.merge(b);
+  assert(a.isLeftistHeap());
+  assert(b.empty());
+  
+  std::vector<int> leftOut;
+  while (!a.empty()) {
+    leftOut.push_back(a.delMax());
+    assert(a.empty() || a.isLeftistHeap());
+  }
+  assert((leftOut == std::vector<int>{20, 19, 18, 17, 8, 7, 4, 3, 1}));
+
+  // Huffman: heap completo y leftist heap deben tener mismo costo ponderado.
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12},
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes1 = ods::huffmanGenerateCodes(s);
+  const auto codes2 = ods::huffmanGenerateCodesLeftHeap(s);
+  assert(ods::huffmanIsPrefixFree(codes1));
+  assert(ods::huffmanIsPrefixFree(codes2));
+  assert(ods::huffmanWeightedPathLength(s, codes1) == 224);
+  assert(ods::huffmanWeightedPathLength(s, codes2) == 224);
+
+  // Rotaciones BST: preservan inorder aun cuando cambie la forma.
+  ods::BinarySearchTree<int> bst;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13}) {
+    bst.add(x);
+  }
+  auto sorted = bst.inorder();
+  bst.rotateLeft(bst.root());
+  assert(bst.isBST());
+  assert(bst.inorder() == sorted);
+  
+  bst.rotateRight(bst.root());
+  assert(bst.isBST());
+  assert(bst.inorder() == sorted);
+
+  // Treap: BST por clave + heap por prioridad.
+  ods::Treap<int> treap(555);
+  treap.addWithPriority(8, 80);
+  treap.addWithPriority(3, 40);
+  treap.addWithPriority(10, 90);
+  treap.addWithPriority(1, 20);
+  treap.addWithPriority(6, 70);
+  treap.addWithPriority(14, 120);
+  treap.addWithPriority(4, 65);
+  treap.addWithPriority(7, 68);
+  
+  assert(treap.isTreap());
+  assert((treap.inorderKeys() == std::vector<int>{1, 3, 4, 6, 7, 8, 10, 14}));
+  assert(treap.lowerBound(5)->key == 6);
+  assert(treap.upperBound(6)->key == 7);
+  
+  assert(treap.remove(3));
+  assert(treap.remove(8));
+  assert(treap.isTreap());
+  assert((treap.inorderKeys() == std::vector<int>{1, 4, 6, 7, 10, 14}));
+
+  return 0;
+}
+```
+
+* **Salida de la demostración:**
+*(Evidencia de inserciones y ASCII Art final)*
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_treap_basico
+[2/2] Linking CXX executable Semana6\sem6_demo_treap_basico.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_treap_basico.exe
+CONSTRUCCION DETERMINISTICA DE TREAP
+------------------------------------------
+Insertado -> Clave: 50 | Prioridad: 50
+Inorden      : 50 
+Por niveles  : 50 
+Raiz actual  : 50
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 30 | Prioridad: 30
+Inorden      : 30 50 
+Por niveles  : 30 50 
+Raiz actual  : 30
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 70 | Prioridad: 70
+Inorden      : 30 50 70 
+Por niveles  : 30 50 70 
+Raiz actual  : 30
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 20 | Prioridad: 20
+Inorden      : 20 30 50 70 
+Por niveles  : 20 30 50 70 
+Raiz actual  : 20
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 40 | Prioridad: 40
+Inorden      : 20 30 40 50 70 
+Por niveles  : 20 30 40 50 70 
+Raiz actual  : 20
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 60 | Prioridad: 60
+Inorden      : 20 30 40 50 60 70 
+Por niveles  : 20 30 40 50 60 70 
+Raiz actual  : 20
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+------------------------------------------
+Insertado -> Clave: 80 | Prioridad: 80
+Inorden      : 20 30 40 50 60 70 80 
+Por niveles  : 20 30 40 50 60 70 80 
+Raiz actual  : 20
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+==========================================
+ARBOL FINAL (ASCII ART):
+Ôöé                       ÔöîÔöÇÔöÇ 80|p=80
+Ôöé                   ÔöîÔöÇÔöÇ 70|p=70
+Ôöé               ÔöîÔöÇÔöÇ 60|p=60
+Ôöé           ÔöîÔöÇÔöÇ 50|p=50
+Ôöé       ÔöîÔöÇÔöÇ 40|p=40
+Ôöé   ÔöîÔöÇÔöÇ 30|p=30
+ÔööÔöÇÔöÇ 20|p=20
+```
+*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
+
+Debio obtenernerse algo como esto :
+
+```bash
+ARBOL FINAL (ASCII ART):
+                        ┌── 80|p=80
+                    ┌── 70|p=70
+                ┌── 60|p=60
+            ┌── 50|p=50
+        ┌── 40|p=40
+    ┌── 30|p=30
+└── 20|p=20
+```
+
+### Preguntas
+
+* **¿Por qué el recorrido inorden debe salir ordenado aunque las prioridades cambien la forma del árbol?**
+  Porque las rotaciones (`rotateLeft` y `rotateRight`) están diseñadas para proteger el invariante del BST. Sin importar cómo los nodos floten o se hundan buscando cumplir su prioridad, la regla horizontal de que "el hijo izquierdo es menor y el derecho es mayor" jamás se rompe.
+
+* **¿Por qué la raíz no necesariamente es la primera clave insertada?**
+  Porque el Treap respeta la propiedad de Min-Heap en sus prioridades. La raíz siempre será forzada a ser el nodo con la prioridad numérica más baja de todo el árbol. Si entra un nodo nuevo con una prioridad menor que el actual, este flotará hasta robarle el puesto de raíz.
+
+* **¿Qué nodo debe subir cuando se inserta una clave con prioridad menor que la de sus ancestros?**
+  El propio nodo recién insertado. A través de la función `bubbleUp`, este nodo ejecutará rotaciones repetitivas con sus padres hasta que logre posicionarse debajo de un nodo con prioridad aún menor, o hasta convertirse en la raíz absoluta.
+
+* **¿Qué propiedad conserva una rotación local sobre las claves?**
+  Conserva estrictamente la propiedad de Árbol Binario de Búsqueda (BST). Garantiza que, tras girar los nodos, el orden de lectura inorden permanezca idéntico.
+
+* **¿Qué propiedad intenta restaurar `bubbleUp` sobre las prioridades?**
+  Intenta restaurar la propiedad de Min-Heap, asegurando que ningún nodo padre tenga una prioridad numérica mayor que la de cualquiera de sus hijos.
