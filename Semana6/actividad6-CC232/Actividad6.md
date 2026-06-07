@@ -4000,7 +4000,7 @@ ARBOL FINAL (ASCII ART):
                 ┌── 80|p=80
             ┌── 60|p=60
         ┌── 40|p=40
-    ┌── 30|p=30eeeeeeeeeeeeeeeeeeeeeee  we
+    ┌── 30|p=30
 ```
 
 ### Preguntas
