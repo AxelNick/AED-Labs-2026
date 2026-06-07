@@ -2857,7 +2857,7 @@ ARBOL FINAL (ASCII ART):
 ```
 *(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
 
-Debio obtenernerse algo como esto :
+Debio obtenerse algo como esto :
 
 ```bash
 ARBOL FINAL (ASCII ART):
@@ -3381,7 +3381,7 @@ ARBOL FINAL (ASCII ART):
 
 *(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
 
-Debio obtenernerse algo como esto :
+Debio obtenerse algo como esto :
 
 ```bash
 ARBOL FINAL (ASCII ART):
@@ -3412,3 +3412,628 @@ El uso de prioridades aleatorias en el Treap evita el peor caso estructural de $
 
 * **¿Por qué el treap busca mantener altura esperada logarítmica, no altura garantizada logarítmica?**
   Porque el Treap confía en el azar, no en rebalanceos estrictos (como un árbol AVL). Al asignar prioridades aleatorias, existe una pequeñísima probabilidad de que el árbol quede desbalanceado (altura $O(N)$). Sin embargo, las matemáticas demuestran que, en promedio, el azar siempre tenderá a formar un árbol balanceado con altura $O(\log N)$.
+
+
+### Parte C - Instrumentación de trickleDown y eliminación
+
+**Entregables del bloque:**
+
+* **Codigo completo de archivo Treap.h modificado :**  
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class Treap {
+ public:
+  struct Node {
+    T key{};
+    std::uint64_t priority{0};
+    Node* parent{nullptr};
+    Node* left{nullptr};
+    Node* right{nullptr};
+
+    Node() = default;
+    Node(const T& value, std::uint64_t p, Node* par = nullptr)
+        : key(value), priority(p), parent(par) {}
+
+    bool isLeftChild() const { return parent != nullptr && parent->left == this; }
+    bool isRightChild() const { return parent != nullptr && parent->right == this; }
+  };
+
+  Treap() : rng_(232) {}
+  explicit Treap(std::uint64_t seed) : rng_(seed) {}
+  explicit Treap(Compare comp, std::uint64_t seed = 232) : comp_(std::move(comp)), rng_(seed) {}
+
+  Treap(const Treap&) = delete;
+  Treap& operator=(const Treap&) = delete;
+
+  Treap(Treap&& other) noexcept { swap(other); }
+  Treap& operator=(Treap&& other) noexcept {
+    if (this != &other) {
+      clear();
+      swap(other);
+    }
+    return *this;
+  }
+
+  ~Treap() { clear(); }
+
+  void clear() {
+    destroy(root_);
+    root_ = nullptr;
+    size_ = 0;
+  }
+
+  void swap(Treap& other) noexcept {
+    std::swap(root_, other.root_);
+    std::swap(size_, other.size_);
+    std::swap(comp_, other.comp_);
+    std::swap(rng_, other.rng_);
+    std::swap(priorityCounter_, other.priorityCounter_);
+  }
+
+  Node* root() const noexcept { return root_; }
+  std::size_t size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  Node* findLast(const T& x) const {
+    Node* w = root_;
+    Node* prev = nullptr;
+    while (w != nullptr) {
+      prev = w;
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return prev;
+  }
+
+  Node* findEQ(const T& x) const {
+    Node* w = root_;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return nullptr;
+  }
+
+  Node* lowerBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return candidate;
+  }
+
+  Node* upperBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else {
+        w = w->right;
+      }
+    }
+    return candidate;
+  }
+
+  bool contains(const T& x) const { return findEQ(x) != nullptr; }
+
+  bool add(const T& x) { return addWithPriority(x, nextPriority()); }
+
+  bool addWithPriority(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return false;
+    }
+    bubbleUp(u);
+    return true;
+  }
+
+  
+  
+  std::size_t bubbleUpCount(Node* u) {
+    std::size_t rotations = 0;
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+      rotations++;
+    }
+    if (!u->parent) root_ = u;
+    return rotations;
+  }
+
+  std::size_t addWithPriorityCount(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return 0; 
+    }
+    return bubbleUpCount(u);
+  }
+// --- INICIO DE MODIFICACION PARTE C ---
+  std::size_t trickleDownCount(Node* u) {
+    std::size_t rotations = 0;
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+      rotations++;
+    }
+    return rotations;
+  }
+
+  std::size_t removeCount(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return 0;
+    std::size_t rotations = trickleDownCount(u);
+    splice(u);
+    delete u;
+    return rotations;
+  }
+
+  // --- FIN DE MODIFICACION PARTE C ---
+
+  bool remove(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return false;
+    trickleDown(u);
+    splice(u);
+    delete u;
+    return true;
+  }
+
+  void rotateLeft(Node* u) {
+    if (!u || !u->right) return;
+    Node* w = u->right;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->right = w->left;
+    if (u->right) u->right->parent = u;
+    w->left = u;
+    u->parent = w;
+  }
+
+  void rotateRight(Node* u) {
+    if (!u || !u->left) return;
+    Node* w = u->left;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->left = w->right;
+    if (u->left) u->left->parent = u;
+    w->right = u;
+    u->parent = w;
+  }
+
+  void bubbleUp(Node* u) {
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+    }
+    if (!u->parent) root_ = u;
+  }
+
+  void trickleDown(Node* u) {
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+    }
+  }
+
+  std::vector<T> inorderKeys() const {
+    std::vector<T> out;
+    inorder(root_, out);
+    return out;
+  }
+
+  std::vector<T> levelOrderKeys() const {
+    std::vector<T> out;
+    std::queue<Node*> q;
+    if (root_) q.push(root_);
+    while (!q.empty()) {
+      Node* u = q.front();
+      q.pop();
+      out.push_back(u->key);
+      if (u->left) q.push(u->left);
+      if (u->right) q.push(u->right);
+    }
+    return out;
+  }
+
+  std::string asciiArt() const {
+    if (!root_) return "(treap vacio)\n";
+    std::vector<std::string> lines;
+    buildAscii(root_, "", true, lines);
+    std::ostringstream out;
+    for (const auto& line : lines) out << line << '\n';
+    return out.str();
+  }
+
+  bool isBST() const { return isBST(root_, nullptr, nullptr) && checkParents(root_, nullptr); }
+  bool isHeapByPriority() const { return isHeapByPriority(root_); }
+  bool isTreap() const { return isBST() && isHeapByPriority(); }
+
+ private:
+  Node* root_{nullptr};
+  std::size_t size_{0};
+  Compare comp_{};
+  std::mt19937_64 rng_;
+  std::uint64_t priorityCounter_{0};
+
+  std::uint64_t nextPriority() {
+    std::uint64_t raw = rng_();
+    return (raw << 16) ^ (++priorityCounter_);
+  }
+
+  bool addNode(Node* u) {
+    u->left = nullptr;
+    u->right = nullptr;
+    Node* p = findLast(u->key);
+    if (!p) {
+      root_ = u;
+      u->parent = nullptr;
+      ++size_;
+      return true;
+    }
+    if (comp_(u->key, p->key)) {
+      if (p->left) return false;
+      p->left = u;
+    } else if (comp_(p->key, u->key)) {
+      if (p->right) return false;
+      p->right = u;
+    } else {
+      return false;
+    }
+    u->parent = p;
+    ++size_;
+    return true;
+  }
+
+  void splice(Node* u) {
+    Node* s = u->left ? u->left : u->right;
+    if (u == root_) {
+      root_ = s;
+    } else if (u->isLeftChild()) {
+      u->parent->left = s;
+    } else {
+      u->parent->right = s;
+    }
+    if (s) s->parent = u->parent;
+    --size_;
+  }
+
+  static void destroy(Node* u) {
+    if (!u) return;
+    destroy(u->left);
+    destroy(u->right);
+    delete u;
+  }
+
+  static void inorder(Node* u, std::vector<T>& out) {
+    if (!u) return;
+    inorder(u->left, out);
+    out.push_back(u->key);
+    inorder(u->right, out);
+  }
+
+  bool isBST(Node* u, const T* low, const T* high) const {
+    if (!u) return true;
+    if (low && !comp_(*low, u->key)) return false;
+    if (high && !comp_(u->key, *high)) return false;
+    return isBST(u->left, low, &u->key) && isBST(u->right, &u->key, high);
+  }
+
+  static bool checkParents(Node* u, Node* parent) {
+    if (!u) return true;
+    if (u->parent != parent) return false;
+    return checkParents(u->left, u) && checkParents(u->right, u);
+  }
+
+  static bool isHeapByPriority(Node* u) {
+    if (!u) return true;
+    if (u->left && u->left->priority < u->priority) return false;
+    if (u->right && u->right->priority < u->priority) return false;
+    return isHeapByPriority(u->left) && isHeapByPriority(u->right);
+  }
+
+  static std::string nodeLabel(const Node* u) {
+    std::ostringstream out;
+    out << u->key << "|p=" << u->priority;
+    return out.str();
+  }
+
+  static void buildAscii(const Node* node, const std::string& prefix, bool isTail,
+                         std::vector<std::string>& lines) {
+    if (!node) return;
+    if (node->right) {
+      buildAscii(node->right, prefix + (isTail ? "│   " : "    "), false, lines);
+    }
+    lines.push_back(prefix + (isTail ? "└── " : "┌── ") + nodeLabel(node));
+    if (node->left) {
+      buildAscii(node->left, prefix + (isTail ? "    " : "│   "), true, lines);
+    }
+  }
+};
+
+template <class T, class Compare>
+inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
+  out << t.asciiArt();
+  return out;
+}
+
+}  // namespace ods
+```
+
+* **Codigo completo de archivo demo_treap_basico.cpp nuevamente modificado :**  
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <utility>
+#include <iomanip>
+
+#include "Capitulo6.h"
+
+int main() {
+  ods::Treap<int> t(232);
+  
+  // Secuencia combinada (Parte A, B y C en la misma demo)
+  
+  // === PARTE A ===
+  std::vector<std::pair<int, int>> sequenceA = {
+      {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
+  };
+
+  std::cout << "=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===\n";
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+    std::cout << "------------------------------------------\n";
+    std::cout << "Insertado -> Clave: " << p.first << " | Prioridad: " << p.second << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nRaiz actual  : " << t.root()->key << "\n";
+    std::cout << "Validaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+
+  // === PARTE B ===
+  t.clear(); // Limpiamos para la prueba B
+  std::vector<std::pair<int, int>> sequenceB = {
+      {100, 100}, {90, 90}, {80, 80}, {70, 70}, {60, 60}
+  };
+
+  std::cout << "\n=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(10) << "Clave" 
+            << std::setw(15) << "Prioridad" 
+            << std::setw(15) << "Rotaciones" 
+            << "Raiz actual\n";
+  std::cout << "---------------------------------------------------\n";
+
+  for (const auto& p : sequenceB) {
+    std::size_t rot = t.addWithPriorityCount(p.first, p.second);
+    std::cout << std::left << std::setw(10) << p.first 
+              << std::setw(15) << p.second 
+              << std::setw(15) << rot 
+              << t.root()->key << "\n";
+  }
+
+  // === PARTE C ===
+  t.clear(); // Limpiamos y reconstruimos la Parte A para la prueba C
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+  }
+
+  std::cout << "\n=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===\n";
+  std::cout << "ARBOL INICIAL:\n" << t << "\n";
+
+  std::vector<int> to_remove = {50, 20, 70};
+
+  for (int key : to_remove) {
+    std::cout << "---------------------------------------------------\n";
+    std::size_t rot = t.removeCount(key);
+    
+    std::cout << "Eliminado    : Clave " << key << " | Rotaciones: " << rot << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nPor niveles  : ";
+    for (int k : t.levelOrderKeys()) std::cout << k << " ";
+    std::cout << "\nValidaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+  std::cout << "---------------------------------------------------\n";
+  std::cout << "ARBOL FINAL (ASCII ART):\n" << t << "\n";
+
+  return 0;
+}
+```
+
+* **Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_treap_basico
+[2/2] Linking CXX executable Semana6\sem6_demo_treap_basico.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_treap_basico.exe
+=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===
+...
+=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===
+...
+=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===
+ARBOL INICIAL:
+Ôöé                       ÔöîÔöÇÔöÇ 80|p=80
+Ôöé                   ÔöîÔöÇÔöÇ 70|p=70
+Ôöé               ÔöîÔöÇÔöÇ 60|p=60
+Ôöé           ÔöîÔöÇÔöÇ 50|p=50
+Ôöé       ÔöîÔöÇÔöÇ 40|p=40
+Ôöé   ÔöîÔöÇÔöÇ 30|p=30
+ÔööÔöÇÔöÇ 20|p=20
+
+---------------------------------------------------
+Eliminado    : Clave 50 | Rotaciones: 1
+Inorden      : 20 30 40 60 70 80 
+Por niveles  : 20 30 40 60 70 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+Eliminado    : Clave 20 | Rotaciones: 1
+Inorden      : 30 40 60 70 80 
+Por niveles  : 30 40 60 70 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+Eliminado    : Clave 70 | Rotaciones: 1
+Inorden      : 30 40 60 80 
+Por niveles  : 30 40 60 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+ARBOL FINAL (ASCII ART):
+Ôöé           ÔöîÔöÇÔöÇ 80|p=80
+Ôöé       ÔöîÔöÇÔöÇ 60|p=60
+Ôöé   ÔöîÔöÇÔöÇ 40|p=40
+ÔööÔöÇÔöÇ 30|p=30
+
+```
+
+*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
+
+Debio obtenerse algo como esto :
+
+```bash
+=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===
+
+ARBOL INICIAL:
+                        ┌── 80|p=80
+                    ┌── 70|p=70
+                ┌── 60|p=60
+            ┌── 50|p=50
+        ┌── 40|p=40
+    ┌── 30|p=30
+└── 20|p=20
+
+---------------------------------------------------
+Eliminado    : Clave 50 | Rotaciones: 1
+Inorden      : 20 30 40 60 70 80 
+Por niveles  : 20 30 40 60 70 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+Eliminado    : Clave 20 | Rotaciones: 1
+Inorden      : 30 40 60 70 80 
+Por niveles  : 30 40 60 70 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+Eliminado    : Clave 70 | Rotaciones: 1
+Inorden      : 30 40 60 80 
+Por niveles  : 30 40 60 80 
+Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
+---------------------------------------------------
+ARBOL FINAL (ASCII ART):
+                ┌── 80|p=80
+            ┌── 60|p=60
+        ┌── 40|p=40
+    ┌── 30|p=30eeeeeeeeeeeeeeeeeeeeeee  we
+```
+
+### Preguntas
+
+* **¿Por qué eliminar en un treap no es simplemente borrar como en un BST común?**
+  En un BST común, se suele reemplazar el nodo a borrar con su predecesor o sucesor. Si hiciéramos eso en un Treap, el nodo que sube traería su propia prioridad aleatoria, lo que casi seguramente rompería la propiedad vertical de Min-Heap del árbol.
+
+* **¿Por qué `trickleDown` elige rotar con el hijo de menor prioridad?**
+  Para preservar el Min-Heap. El hijo que sube se convertirá en el padre del otro. Si subiéramos al hijo con la prioridad más alta, terminaría siendo el padre de un nodo con una prioridad más baja, lo cual viola el invariante de Min-Heap.
+
+* **¿Qué ocurre si el nodo tiene solo hijo izquierdo?**
+  Se fuerza una `rotateRight` (rotación a la derecha). Esto "hunde" al nodo hacia el lado derecho y permite que su hijo izquierdo suba a ocupar su posición, garantizando que siga conectado al árbol.
+
+* **¿Qué ocurre si el nodo tiene solo hijo derecho?**
+  Se fuerza una `rotateLeft` (rotación a la izquierda). El nodo se "hunde" hacia el lado izquierdo, subiendo al hijo derecho a la posición original.
+
+* **¿Qué invariantes deben seguir siendo verdaderos después de `splice`?**
+  Ambos invariantes del Treap: la propiedad de búsqueda binaria (isBST) y la de prioridad (isHeap). Como el nodo solo se "corta" (`splice`) cuando ya ha sido hundido hasta convertirse en una hoja (o tener a lo mucho un hijo nulo), su eliminación no afecta el orden ni las prioridades del resto del árbol.
+
+### Trazado Manual: Eliminación de la Clave 50
+
+**Estado Inicial (Fragmento de la rama derecha):**
+`... -> (40)` cuyo hijo derecho es `(50)`. 
+El hijo derecho de `(50)` es `(60)`. `(50)` no tiene hijo izquierdo.
+
+**Paso 1: Identificación y TrickleDown**
+Queremos eliminar `50`. Como solo tiene hijo derecho (`60`), `trickleDown` aplica una rotación a la izquierda (`rotateLeft(50)`).
+
+**Paso 2: La Rotación**
+Al rotar a la izquierda, `60` sube y se convierte en el nuevo hijo derecho de `40`. 
+El nodo `50` baja y se convierte en el *hijo izquierdo de 60*. (Como `60` no tenía hijo izquierdo previamente, no hay huérfanos).
+
+**Paso 3: Condición de Salida y Splice**
+Ahora `50` es una hoja (no tiene hijo izquierdo ni derecho). El bucle de `trickleDown` se detiene.
+La función `splice(50)` simplemente desconecta a `50` de su nuevo padre (`60`) y libera la memoria (`delete`).
+**Resultado:** `40` apunta a `60` como su hijo derecho. El nodo `50` desapareció limpiamente sin romper nada.
