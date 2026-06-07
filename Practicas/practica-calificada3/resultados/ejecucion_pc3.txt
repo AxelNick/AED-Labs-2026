@@ -1,0 +1,27 @@
+EVIDENCIA DE EJECUCIÓN: ATCODER ABC170 E
+
+Comando ejecutado:
+./build/main.exe
+
+Entrada (N=6 infantes, Q=3 transferencias):
+6 3
+8 1
+6 2
+9 3
+1 1
+2 2
+1 3
+4 3
+2 1
+1 2
+
+Salida del programa (Mínimo de los máximos tras cada transferencia):
+6
+2
+6
+
+Explicación del caso validado:
+- Inicialmente: G1={8,1}, G2={6,2}, G3={9,1}. Máximos: {8,6,9}. Mínimo = 6.
+- Transf. 1 (Infante 4 a G3): G1={8}, G2={6,2}, G3={9,1,1}. Máximos: {8,6,9}. Mínimo = 6.
+- Transf. 2 (Infante 2 a G1): G1={8,6}, G2={2}, G3={9,1,1}. Máximos: {8,2,9}. Mínimo = 2.
+- Transf. 3 (Infante 1 a G2): G1={6}, G2={8,2}, G3={9,1,1}. Máximos: {6,8,9}. Mínimo = 6.
