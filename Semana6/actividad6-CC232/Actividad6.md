@@ -2886,3 +2886,529 @@ ARBOL FINAL (ASCII ART):
 
 * **¿Qué propiedad intenta restaurar `bubbleUp` sobre las prioridades?**
   Intenta restaurar la propiedad de Min-Heap, asegurando que ningún nodo padre tenga una prioridad numérica mayor que la de cualquiera de sus hijos.
+
+
+
+### Parte B - Instrumentación de bubbleUp
+
+**Entregables del bloque:**
+
+* **Codigo completo de archivo Treap.h modificado :**  
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class Treap {
+ public:
+  struct Node {
+    T key{};
+    std::uint64_t priority{0};
+    Node* parent{nullptr};
+    Node* left{nullptr};
+    Node* right{nullptr};
+
+    Node() = default;
+    Node(const T& value, std::uint64_t p, Node* par = nullptr)
+        : key(value), priority(p), parent(par) {}
+
+    bool isLeftChild() const { return parent != nullptr && parent->left == this; }
+    bool isRightChild() const { return parent != nullptr && parent->right == this; }
+  };
+
+  Treap() : rng_(232) {}
+  explicit Treap(std::uint64_t seed) : rng_(seed) {}
+  explicit Treap(Compare comp, std::uint64_t seed = 232) : comp_(std::move(comp)), rng_(seed) {}
+
+  Treap(const Treap&) = delete;
+  Treap& operator=(const Treap&) = delete;
+
+  Treap(Treap&& other) noexcept { swap(other); }
+  Treap& operator=(Treap&& other) noexcept {
+    if (this != &other) {
+      clear();
+      swap(other);
+    }
+    return *this;
+  }
+
+  ~Treap() { clear(); }
+
+  void clear() {
+    destroy(root_);
+    root_ = nullptr;
+    size_ = 0;
+  }
+
+  void swap(Treap& other) noexcept {
+    std::swap(root_, other.root_);
+    std::swap(size_, other.size_);
+    std::swap(comp_, other.comp_);
+    std::swap(rng_, other.rng_);
+    std::swap(priorityCounter_, other.priorityCounter_);
+  }
+
+  Node* root() const noexcept { return root_; }
+  std::size_t size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  Node* findLast(const T& x) const {
+    Node* w = root_;
+    Node* prev = nullptr;
+    while (w != nullptr) {
+      prev = w;
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return prev;
+  }
+
+  Node* findEQ(const T& x) const {
+    Node* w = root_;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return nullptr;
+  }
+
+  Node* lowerBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return candidate;
+  }
+
+  Node* upperBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else {
+        w = w->right;
+      }
+    }
+    return candidate;
+  }
+
+  bool contains(const T& x) const { return findEQ(x) != nullptr; }
+
+  bool add(const T& x) { return addWithPriority(x, nextPriority()); }
+
+  bool addWithPriority(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return false;
+    }
+    bubbleUp(u);
+    return true;
+  }
+
+  // INICIO DE MODIFICACION PARTE B 
+  
+  std::size_t bubbleUpCount(Node* u) {
+    std::size_t rotations = 0;
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+      rotations++;
+    }
+    if (!u->parent) root_ = u;
+    return rotations;
+  }
+
+  std::size_t addWithPriorityCount(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return 0; 
+    }
+    return bubbleUpCount(u);
+  }
+
+  // FIN DE MODIFICACION PARTE B 
+
+  bool remove(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return false;
+    trickleDown(u);
+    splice(u);
+    delete u;
+    return true;
+  }
+
+  void rotateLeft(Node* u) {
+    if (!u || !u->right) return;
+    Node* w = u->right;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->right = w->left;
+    if (u->right) u->right->parent = u;
+    w->left = u;
+    u->parent = w;
+  }
+
+  void rotateRight(Node* u) {
+    if (!u || !u->left) return;
+    Node* w = u->left;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->left = w->right;
+    if (u->left) u->left->parent = u;
+    w->right = u;
+    u->parent = w;
+  }
+
+  void bubbleUp(Node* u) {
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+    }
+    if (!u->parent) root_ = u;
+  }
+
+  void trickleDown(Node* u) {
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+    }
+  }
+
+  std::vector<T> inorderKeys() const {
+    std::vector<T> out;
+    inorder(root_, out);
+    return out;
+  }
+
+  std::vector<T> levelOrderKeys() const {
+    std::vector<T> out;
+    std::queue<Node*> q;
+    if (root_) q.push(root_);
+    while (!q.empty()) {
+      Node* u = q.front();
+      q.pop();
+      out.push_back(u->key);
+      if (u->left) q.push(u->left);
+      if (u->right) q.push(u->right);
+    }
+    return out;
+  }
+
+  std::string asciiArt() const {
+    if (!root_) return "(treap vacio)\n";
+    std::vector<std::string> lines;
+    buildAscii(root_, "", true, lines);
+    std::ostringstream out;
+    for (const auto& line : lines) out << line << '\n';
+    return out.str();
+  }
+
+  bool isBST() const { return isBST(root_, nullptr, nullptr) && checkParents(root_, nullptr); }
+  bool isHeapByPriority() const { return isHeapByPriority(root_); }
+  bool isTreap() const { return isBST() && isHeapByPriority(); }
+
+ private:
+  Node* root_{nullptr};
+  std::size_t size_{0};
+  Compare comp_{};
+  std::mt19937_64 rng_;
+  std::uint64_t priorityCounter_{0};
+
+  std::uint64_t nextPriority() {
+    std::uint64_t raw = rng_();
+    return (raw << 16) ^ (++priorityCounter_);
+  }
+
+  bool addNode(Node* u) {
+    u->left = nullptr;
+    u->right = nullptr;
+    Node* p = findLast(u->key);
+    if (!p) {
+      root_ = u;
+      u->parent = nullptr;
+      ++size_;
+      return true;
+    }
+    if (comp_(u->key, p->key)) {
+      if (p->left) return false;
+      p->left = u;
+    } else if (comp_(p->key, u->key)) {
+      if (p->right) return false;
+      p->right = u;
+    } else {
+      return false;
+    }
+    u->parent = p;
+    ++size_;
+    return true;
+  }
+
+  void splice(Node* u) {
+    Node* s = u->left ? u->left : u->right;
+    if (u == root_) {
+      root_ = s;
+    } else if (u->isLeftChild()) {
+      u->parent->left = s;
+    } else {
+      u->parent->right = s;
+    }
+    if (s) s->parent = u->parent;
+    --size_;
+  }
+
+  static void destroy(Node* u) {
+    if (!u) return;
+    destroy(u->left);
+    destroy(u->right);
+    delete u;
+  }
+
+  static void inorder(Node* u, std::vector<T>& out) {
+    if (!u) return;
+    inorder(u->left, out);
+    out.push_back(u->key);
+    inorder(u->right, out);
+  }
+
+  bool isBST(Node* u, const T* low, const T* high) const {
+    if (!u) return true;
+    if (low && !comp_(*low, u->key)) return false;
+    if (high && !comp_(u->key, *high)) return false;
+    return isBST(u->left, low, &u->key) && isBST(u->right, &u->key, high);
+  }
+
+  static bool checkParents(Node* u, Node* parent) {
+    if (!u) return true;
+    if (u->parent != parent) return false;
+    return checkParents(u->left, u) && checkParents(u->right, u);
+  }
+
+  static bool isHeapByPriority(Node* u) {
+    if (!u) return true;
+    if (u->left && u->left->priority < u->priority) return false;
+    if (u->right && u->right->priority < u->priority) return false;
+    return isHeapByPriority(u->left) && isHeapByPriority(u->right);
+  }
+
+  static std::string nodeLabel(const Node* u) {
+    std::ostringstream out;
+    out << u->key << "|p=" << u->priority;
+    return out.str();
+  }
+
+  static void buildAscii(const Node* node, const std::string& prefix, bool isTail,
+                         std::vector<std::string>& lines) {
+    if (!node) return;
+    if (node->right) {
+      buildAscii(node->right, prefix + (isTail ? "│   " : "    "), false, lines);
+    }
+    lines.push_back(prefix + (isTail ? "└── " : "┌── ") + nodeLabel(node));
+    if (node->left) {
+      buildAscii(node->left, prefix + (isTail ? "    " : "│   "), true, lines);
+    }
+  }
+};
+
+template <class T, class Compare>
+inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
+  out << t.asciiArt();
+  return out;
+}
+
+}  // namespace ods
+```
+
+* **Codigo completo de archivo demo_treap_basico.cpp modificado nuevamente :**  
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <utility>
+#include <iomanip>
+
+#include "Capitulo6.h"
+
+int main() {
+  ods::Treap<int> t(232);
+  
+  // Secuencia combinada (Parte A y B en la misma demo)
+  
+  // === PARTE A ===
+  std::vector<std::pair<int, int>> sequenceA = {
+      {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
+  };
+
+  std::cout << "=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===\n";
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+    std::cout << "------------------------------------------\n";
+    std::cout << "Insertado -> Clave: " << p.first << " | Prioridad: " << p.second << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nRaiz actual  : " << t.root()->key << "\n";
+    std::cout << "Validaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+
+  // === PARTE B ===
+  // Limpiamos el Treap para la nueva prueba
+  t.clear(); 
+  
+  std::vector<std::pair<int, int>> sequenceB = {
+      {100, 100}, {90, 90}, {80, 80}, {70, 70}, {60, 60}
+  };
+
+  std::cout << "\n=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(10) << "Clave" 
+            << std::setw(15) << "Prioridad" 
+            << std::setw(15) << "Rotaciones" 
+            << "Raiz actual\n";
+  std::cout << "---------------------------------------------------\n";
+
+  for (const auto& p : sequenceB) {
+    int key = p.first;
+    int prio = p.second;
+    
+    // Usamos nuestra funcion instrumentada
+    std::size_t rot = t.addWithPriorityCount(key, prio);
+
+    std::cout << std::left << std::setw(10) << key 
+              << std::setw(15) << prio 
+              << std::setw(15) << rot 
+              << t.root()->key << "\n";
+  }
+  std::cout << "---------------------------------------------------\n";
+  std::cout << "\nARBOL FINAL (ASCII ART):\n" << t << "\n";
+
+  return 0;
+}
+```
+
+* **Salida de la demostración:**
+*(Evidencia de la Consola (Tabla y Costo))*
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_treap_basico
+[2/2] Linking CXX executable Semana6\sem6_demo_treap_basico.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_treap_basico.exe
+=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===
+...
+=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===
+---------------------------------------------------
+Clave     Prioridad      Rotaciones     Raiz actual
+---------------------------------------------------
+100       100            0              100
+90        90             1              90
+80        80             1              80
+70        70             1              70
+60        60             1              60
+---------------------------------------------------
+
+ARBOL FINAL (ASCII ART):
+Ôöé               ÔöîÔöÇÔöÇ 100|p=100
+Ôöé           ÔöîÔöÇÔöÇ 90|p=90
+Ôöé       ÔöîÔöÇÔöÇ 80|p=80
+Ôöé   ÔöîÔöÇÔöÇ 70|p=70
+ÔööÔöÇÔöÇ 60|p=60
+
+```
+
+*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
+
+Debio obtenernerse algo como esto :
+
+```bash
+ARBOL FINAL (ASCII ART):
+                ┌── 100|p=100
+            ┌── 90|p=90
+        ┌── 80|p=80
+    ┌── 70|p=70
+└── 60|p=60
+```
+
+**Explicación del costo esperado :**
+El uso de prioridades aleatorias en el Treap evita el peor caso estructural de $O(N)$. Matemáticamente, el costo esperado para arreglar el Min-Heap tras insertar o eliminar es de $O(1)$ amortizado (menos de 2 rotaciones), logrando que estas operaciones mantengan una altísima eficiencia total de $O(\log N)$
+
+### Preguntas
+
+* **¿Por qué esta secuencia tiende a producir rotaciones repetidas?**
+  Porque insertamos prioridades cada vez menores (100, 90, 80...). Esto rompe la regla del Min-Heap constantemente, obligando al Treap a empujar cada nuevo nodo hasta la raíz mediante rotaciones para corregirlo
+
+* **¿Cuándo `bubbleUpCount` retorna cero?**
+  En dos casos exactos: 1. Cuando el árbol está vacío (el nodo nace siendo la raíz).
+  2. Cuando el nodo se inserta y su prioridad aleatoria resulta ser mayor o igual a la de su padre, cumpliendo la regla del Min-Heap sin necesidad de moverse.
+
+* **¿Cuál es el peor caso de rotaciones durante una inserción?**
+  Es $O(N)$ rotaciones. Ocurre si el árbol degeneró en una "lista" y el nuevo nodo cae en lo más profundo, pero recibe la prioridad más baja de todas. Tendrá que subir rotando por todos los nodos hasta llegar a la raíz.
+
+* **¿Por qué una rotación no rompe la propiedad BST?**
+  Porque la rotación solo reacomoda las conexiones respetando el orden original (Inorden). Si el valor de un nodo $A$ es menor que $B$, la rotación matemática garantiza que $A$ siempre se mantenga en la rama izquierda respecto a $B$.
+
+* **¿Por qué el treap busca mantener altura esperada logarítmica, no altura garantizada logarítmica?**
+  Porque el Treap confía en el azar, no en rebalanceos estrictos (como un árbol AVL). Al asignar prioridades aleatorias, existe una pequeñísima probabilidad de que el árbol quede desbalanceado (altura $O(N)$). Sin embargo, las matemáticas demuestran que, en promedio, el azar siempre tenderá a formar un árbol balanceado con altura $O(\log N)$.
