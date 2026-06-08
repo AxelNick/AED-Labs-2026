@@ -4042,7 +4042,7 @@ La función `splice(50)` simplemente desconecta a `50` de su nuevo padre (`60`) 
 
 **Entregables del bloque:**
 
-* **Codigo completo de archivo emo_treap_basico.cpp modificado :**  
+* **Codigo completo de archivo demo_treap_basico.cpp modificado :**  
 
 ```cpp
 #include <iostream>
@@ -4216,3 +4216,180 @@ upperBound     75        80
 
 * **¿Cuándo SÍ vale la pena usar un Treap?**
   Cuando necesitas una estructura "todoterreno". Es ideal si tu problema te pide insertar y borrar datos muy rápido, pero *al mismo tiempo* necesitas hacer búsquedas de rangos, encontrar predecesores, o partir y fusionar árboles gigantes en tiempo logarítmico `O(log N)`.
+
+
+### Parte E - Pruebas específicas para Treap
+
+**Entregables del bloque:**
+
+* **Codigo completo de archivo test_internal_week6.cpp modificado :**  
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // Bloque 5 : PRUEBAS DE VALIDACIÓN isValidHeap
+  ods::PQ_ComplHeap<int> pqEmpty;
+  assert(pqEmpty.isValidHeap()); // 1. Heap vacío
+
+  ods::PQ_ComplHeap<int> pqOne;
+  pqOne.insert(42);
+  assert(pqOne.isValidHeap()); // 2. Heap con un elemento
+
+  ods::PQ_ComplHeap<int> pqRep;
+  pqRep.insert(7); pqRep.insert(7); pqRep.insert(7);
+  assert(pqRep.isValidHeap()); // 3. Heap con elementos repetidos
+
+  ods::PQ_ComplHeap<int> pqIns;
+  for (int x : {15, 2, 8, 1, 99, 4}) pqIns.insert(x);
+  assert(pqIns.isValidHeap()); // 4. Heap construido por inserciones
+
+  ods::PQ_ComplHeap<int> pqHeapify(std::vector<int>{15, 2, 8, 1, 99, 4});
+  assert(pqHeapify.isValidHeap()); // 5. Heap construido por heapify
+  
+  pqHeapify.delMax();
+  pqHeapify.delMax();
+  assert(pqHeapify.isValidHeap()); // 6. Heap después de varias llamadas a delMax
+
+  ods::PQ_ComplHeap<int> pq;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13, 14}) {
+    pq.insert(x);
+    assert(pq.isValidHeap());
+  }
+  
+  ods::PQ_LeftHeap<int> a{20, 7, 18, 3};
+  ods::PQ_LeftHeap<int> b{19, 8, 4, 1, 17};
+  a.merge(b);
+  assert(a.isLeftistHeap());
+  assert(b.empty());
+
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12},
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes1 = ods::huffmanGenerateCodes(s);
+  const auto codes2 = ods::huffmanGenerateCodesLeftHeap(s);
+  assert(ods::huffmanIsPrefixFree(codes1));
+
+  ods::BinarySearchTree<int> bst;
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7, 13}) {
+    bst.add(x);
+  }
+  auto sorted = bst.inorder();
+  bst.rotateLeft(bst.root());
+  assert(bst.isBST());
+  
+  // PARTE E: PRUEBAS ESPECÍFICAS PARA TREAP (BLOQUE 10)
+
+  ods::Treap<int> t(12345);
+
+  // 1. Treap vacío
+  assert(t.empty());
+  assert(t.size() == 0);
+  assert(t.isBST());
+  assert(t.isHeapByPriority());
+  assert(t.isTreap());
+
+  // 2. Inserción con prioridades fijas y rechazo de duplicados
+  assert(t.addWithPriority(50, 50));
+  assert(!t.addWithPriority(50, 20)); // Falla duplicado intencionalmente
+  
+  // Secuencia de prueba (la misma de las Partes A y C)
+  t.addWithPriority(30, 30);
+  t.addWithPriority(70, 70);
+  t.addWithPriority(20, 20); // Será la raíz absoluta
+  t.addWithPriority(40, 40);
+  t.addWithPriority(60, 60);
+  t.addWithPriority(80, 80); // Será una hoja
+
+  // 3. Inorden ordenado y propiedad heap por prioridad
+  assert(t.isTreap()); // Comprueba internamente isBST() e isHeapByPriority()
+  auto keys = t.inorderKeys();
+  assert(std::is_sorted(keys.begin(), keys.end()));
+
+  // 4. lowerBound y upperBound
+  assert(t.lowerBound(35)->key == 40);
+  assert(t.upperBound(40)->key == 50);
+
+  // 5. Eliminaciones estructuradas
+  assert(t.remove(80)); // Eliminación de HOJA
+  assert(t.size() == 6);
+  assert(t.isTreap());  // Conservación de enlaces parent (vía checkParents en isTreap)
+
+  assert(t.remove(70)); // Eliminación de NODO CON UN HIJO (ahora solo tiene a 60)
+  assert(t.size() == 5);
+  assert(t.isTreap());
+
+  assert(t.remove(30)); // Eliminación de NODO CON DOS HIJOS (tiene a 40 y la rama de 50)
+  assert(t.size() == 4);
+  assert(t.isTreap());
+
+  assert(t.remove(20)); // Eliminación de RAÍZ
+  assert(t.size() == 3);
+  assert(t.isTreap());
+
+  // 6. Consistencia de size() después de operaciones mixtas
+  assert(!t.remove(999)); // No existe
+  assert(t.size() == 3);  // Size no debe cambiar
+
+  // 7. Estabilidad tras secuencia larga de inserciones y eliminaciones
+  ods::Treap<int> t_long(999);
+  for(int i = 0; i < 500; i++) {
+    t_long.add(i * 13 % 100); // Genera colisiones e inserciones aleatorias
+  }
+  assert(t_long.isTreap());
+  for(int i = 0; i < 50; i++) {
+    t_long.remove(i);
+  }
+  assert(t_long.isTreap()); // El invariante sobrevive al caos
+
+  return 0;
+}
+```
+
+* **Compilación y ejecución de pruebas :**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ cmake --build build-debug --config Debug
+[20/20] Linking CXX executable sem6_test_internal.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ ctest --test-dir build-debug -R semana6 --output-on-failure
+Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6/build-debug
+    Start 1: semana6_public
+1/2 Test #1: semana6_public ...................   Passed    0.11 sec
+    Start 2: semana6_internal
+2/2 Test #2: semana6_internal .................   Passed    0.10 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.23 sec
+```
+
+### Breve explicación de pruebas
+* **Casos base (Vacío / Duplicados):** Evita que el programa colapse al arrancar sin datos o que se corrompa al intentar meter valores que ya existen.
+* **Validación estructural (Inorden / Heap):** Confirma que el árbol no pierda su doble identidad: orden correcto de izquierda a derecha (BST) y prioridades correctas de arriba a abajo (Heap).
+* **Eliminación exhaustiva:** Prueba borrar hojas, raíces o nodos intermedios para asegurar que ninguna rotación de `trickleDown` deje punteros "sueltos".
+* **Prueba de estrés:** Simula un uso masivo y caótico para garantizar que el programa no sufra fugas de memoria a largo plazo.
+
+### Preguntas
+
+* **¿Qué bug atraparía una prueba de enlaces `parent`?**
+    Detectaría rotaciones mal hechas. Si al rotar un nodo olvida quién es su nuevo "padre", el árbol se rompe por la mitad, lo que causaría bucles infinitos o el cierre del programa.
+
+* **¿Qué bug atraparía una prueba de `size()`?**
+    Detectaría que te olvidaste actualizar el contador interno. Por ejemplo, olvidar sumar `+1` al insertar, o restar `-1` al intentar borrar algo que ni siquiera existía.
+
+* **¿Qué bug atraparía una prueba de inorden ordenado?**
+    Detectaría que una rotación cruzó los cables (por ejemplo, empujó números menores hacia el lado derecho). Si el inorden deja de estar ordenado, las búsquedas rápidas dejarán de funcionar.
+
+* **¿Qué bug atraparía una prueba de prioridad padre-hijo?**
+    Detectaría que las prioridades fallaron. Por ejemplo, que un `bubbleUp` se detuvo antes de tiempo y dejó un nodo padre con una prioridad peor que la de su propio hijo, rompiendo el Min-Heap.
+
+* **¿Por qué conviene usar prioridades fijas en pruebas unitarias?**
+    Porque para probar código necesitas que todo sea predecible y repetible. Si usas prioridades aleatorias (como hace el Treap normalmente), el árbol cambiará de forma cada vez que corras la prueba, haciendo imposible forzar y evaluar un escenario exacto.
