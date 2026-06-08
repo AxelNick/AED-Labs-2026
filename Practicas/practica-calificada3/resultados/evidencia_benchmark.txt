@@ -1,0 +1,27 @@
+REPORTE DE RENDIMIENTO (BENCHMARK) : ATCODER ABC170 E - SMART INFANTS
+
+[ENTORNO DE EJECUCIÓN]
+Comando de compilación : g++ -I include benchmark/benchmark_pc3.cpp -o build/benchmark_pc3.exe -O3
+Nivel de optimización  : -O3 (Máxima velocidad, priorizando el rendimiento de la CPU)
+Comando de ejecución   : ./build/benchmark_pc3.exe
+
+[PARÁMETROS DE LA PRUEBA (ESTRÉS MÁXIMO)]
+Cantidad de infantes (N)       : 20,000
+Cantidad de transferencias (Q) : 10,000
+Distribución de datos          : Generación pseudoaleatoria uniforme (mt19937)
+Estructura evaluada            : Múltiples Max-Heaps locales y un Min-Heap global
+
+[SALIDA OBTENIDA EN CONSOLA]
+------------------------------------------
+  BENCHMARK: SMART INFANTS (ABC170 E)     
+------------------------------------------
+Operaciones: 10000 transferencias.
+Tiempo solucion con Heaps y Lazy Deletion: 4.1083 ms.
+Complejidad demostrada: O(Q log N).
+
+[ANÁLISIS DE RENDIMIENTO Y COMPLEJIDAD]
+El tiempo de ejecución en milisegundos confirma que el algoritmo opera con una eficiencia logarítmica de O(log N) por transferencia. 
+
+La clave de este rendimiento es el uso de Lazy Deletion. Al postergar la limpieza de los datos obsoletos, se elimina el costoso 
+tiempo lineal O(N) que tomaría buscar y borrar elementos explícitamente en los Heaps. En conclusión, la estructura es altamente 
+escalable, procesa ráfagas masivas de consultas sin degradarse y superar  límite de tiempo del juez de AtCoder.
