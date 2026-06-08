@@ -4036,4 +4036,183 @@ El nodo `50` baja y se convierte en el *hijo izquierdo de 60*. (Como `60` no ten
 **Paso 3: Condición de Salida y Splice**
 Ahora `50` es una hoja (no tiene hijo izquierdo ni derecho). El bucle de `trickleDown` se detiene.
 La función `splice(50)` simplemente desconecta a `50` de su nuevo padre (`60`) y libera la memoria (`delete`).
-**Resultado:** `40` apunta a `60` como su hijo derecho. El nodo `50` desapareció limpiamente sin romper nada.
+**Resultado:** `40` apunta a `60` como su hijo derecho. El nodo `50` desapareció limpiamente sin romper nada
+
+### Parte D - Búsqueda ordenada en Treap
+
+**Entregables del bloque:**
+
+* **Codigo completo de archivo emo_treap_basico.cpp modificado :**  
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <utility>
+#include <iomanip>
+#include <string>
+
+#include "Capitulo6.h"
+
+int main() {
+  ods::Treap<int> t(232);
+  
+
+  // === PARTE A ===
+  std::vector<std::pair<int, int>> sequenceA = {
+      {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
+  };
+
+  std::cout << "=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===\n";
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+    std::cout << "------------------------------------------\n";
+    std::cout << "Insertado -> Clave: " << p.first << " | Prioridad: " << p.second << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nRaiz actual  : " << t.root()->key << "\n";
+    std::cout << "Validaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+
+  // === PARTE B ===
+  t.clear(); // Limpiamos para la prueba B
+  std::vector<std::pair<int, int>> sequenceB = {
+      {100, 100}, {90, 90}, {80, 80}, {70, 70}, {60, 60}
+  };
+
+  std::cout << "\n=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(10) << "Clave" 
+            << std::setw(15) << "Prioridad" 
+            << std::setw(15) << "Rotaciones" 
+            << "Raiz actual\n";
+  std::cout << "---------------------------------------------------\n";
+
+  for (const auto& p : sequenceB) {
+    std::size_t rot = t.addWithPriorityCount(p.first, p.second);
+    std::cout << std::left << std::setw(10) << p.first 
+              << std::setw(15) << p.second 
+              << std::setw(15) << rot 
+              << t.root()->key << "\n";
+  }
+
+  // === PARTE C ===
+  t.clear(); // Limpiamos y reconstruimos la Parte A para la prueba C
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+  }
+
+  std::cout << "\n=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===\n";
+  std::cout << "ARBOL INICIAL:\n" << t << "\n";
+
+  std::vector<int> to_remove = {50, 20, 70};
+
+  for (int key : to_remove) {
+    std::cout << "---------------------------------------------------\n";
+    std::size_t rot = t.removeCount(key);
+    
+    std::cout << "Eliminado    : Clave " << key << " | Rotaciones: " << rot << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nPor niveles  : ";
+    for (int k : t.levelOrderKeys()) std::cout << k << " ";
+    std::cout << "\nValidaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+  std::cout << "---------------------------------------------------\n";
+  std::cout << "ARBOL FINAL (ASCII ART):\n" << t << "\n";
+
+  // === PARTE D ===
+  t.clear(); // Limpiamos y reconstruimos la Parte A para la prueba D
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+  }
+
+  std::cout << "\n=== PARTE D: BUSQUEDA ORDENADA EN TREAP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(15) << "Operacion" 
+            << std::setw(10) << "Clave" 
+            << "Resultado\n";
+  std::cout << "---------------------------------------------------\n";
+
+  // Funcion lambda auxiliar para imprimir la tabla limpiamente
+  auto printSearch = [](const std::string& op, int val, auto* node) {
+    std::cout << std::left << std::setw(15) << op 
+              << std::setw(10) << val 
+              << (node ? std::to_string(node->key) : "NULL") << "\n";
+  };
+
+  printSearch("findEQ", 40, t.findEQ(40));
+  printSearch("findEQ", 35, t.findEQ(35));
+  printSearch("lowerBound", 35, t.lowerBound(35));
+  printSearch("lowerBound", 40, t.lowerBound(40));
+  printSearch("upperBound", 40, t.upperBound(40));
+  printSearch("upperBound", 75, t.upperBound(75));
+  std::cout << "---------------------------------------------------\n";
+
+  return 0;
+}
+```
+
+* **Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_treap_basico
+[2/2] Linking CXX executable Semana6\sem6_demo_treap_basico.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_treap_basico.exe
+=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===
+...
+=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===
+...
+=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===
+...
+=== PARTE D: BUSQUEDA ORDENADA EN TREAP ===
+---------------------------------------------------
+Operacion      Clave     Resultado
+---------------------------------------------------
+findEQ         40        40
+findEQ         35        NULL
+lowerBound     35        40
+lowerBound     40        40
+upperBound     40        50
+upperBound     75        80
+---------------------------------------------------
+```
+
+
+### Tabla Comparativa: Treap vs BinarySearchTree
+
+| Operación | Clave | Resultado Treap | Resultado esperado en BST | Propiedad utilizada en ambas |
+| :--- | :--- | :--- | :--- | :--- |
+| `findEQ` | 40 | 40 | 40 | Ordenamiento Inorden (BST) |
+| `findEQ` | 35 | NULL | NULL | Ordenamiento Inorden (BST) |
+| `lowerBound` | 35 | 40 | 40 | Búsqueda binaria guiada por Claves (BST) |
+| `lowerBound` | 40 | 40 | 40 | Búsqueda binaria guiada por Claves (BST) |
+| `upperBound` | 40 | 50 | 50 | Búsqueda binaria guiada por Claves (BST) |
+| `upperBound` | 75 | 80 | 80 | Búsqueda binaria guiada por Claves (BST) |
+
+### Conclusión
+
+**Conclusión:** El Treap y el BST dan exactamente los mismos resultados al buscar. Esto demuestra que no importa cómo se "tuerza" el árbol hacia arriba o hacia abajo por culpa de las prioridades aleatorias (Heap); su ordenamiento de izquierda a derecha (BST) se mantiene siempre intacto y perfecto.
+
+### Preguntas
+
+* **¿Por qué `lowerBound` y `upperBound` usan la regla del BST y no la del Heap?**
+  Porque estas operaciones buscan valores matemáticos (las claves). La regla del Heap solo acomoda nodos hacia arriba o abajo usando números al azar (prioridades), lo cual no sirve para buscar secuencias lógicas de datos.
+
+* **¿Qué parte del treap se comporta como un BST?**
+  **El eje horizontal (de izquierda a derecha).** Todo lo que sea navegar por las ramas para buscar un valor, pedir rangos o leer en Inorden, funciona idéntico a un árbol binario clásico.
+
+* **¿Qué parte del treap se comporta como un Heap?**
+  **El eje vertical (de arriba a abajo).** Esto se nota cuando los nodos "flotan" (`bubbleUp`) o "se hunden" (`trickleDown`) para asegurar que los padres siempre tengan mejor prioridad que sus hijos.
+
+* **¿Por qué no usar un Treap si solo quiero extraer mínimos o máximos todo el tiempo?**
+  Porque sería un desperdicio enorme de recursos. Un Heap tradicional (como el de la Actividad 5) usa un simple arreglo: es rapidísimo y no usa punteros. Un Treap tiene que crear nodos en memoria dinámica y reconectar punteros constantemente, lo que lo hace mucho más lento y pesado para una tarea tan simple.
+
+* **¿Cuándo SÍ vale la pena usar un Treap?**
+  Cuando necesitas una estructura "todoterreno". Es ideal si tu problema te pide insertar y borrar datos muy rápido, pero *al mismo tiempo* necesitas hacer búsquedas de rangos, encontrar predecesores, o partir y fusionar árboles gigantes en tiempo logarítmico `O(log N)`.
