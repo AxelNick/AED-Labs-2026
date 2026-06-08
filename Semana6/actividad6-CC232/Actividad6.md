@@ -2597,7 +2597,7 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 #include "Capitulo6.h"
 
 int main() {
-  // --- MOD-A6-B5: PRUEBAS DE VALIDACIÓN isValidHeap ---
+  // Bloque 5 : PRUEBAS DE VALIDACIÓN isValidHeap 
   ods::PQ_ComplHeap<int> pqEmpty;
   assert(pqEmpty.isValidHeap()); // 1. Heap vacío
 
@@ -2622,7 +2622,6 @@ int main() {
   
   assert(h.delMax() == 12);
   assert(h.isValidHeap()); // 6. Heap después de inserciones y extracciones
-  // ----------------------------------------------------
 
   // Pruebas de ordenamiento
   std::vector<int> xs{5, 1, 8, 3, 2};
@@ -2691,7 +2690,7 @@ int main() {
 #include "Capitulo6.h"
 
 int main() {
-  // --- MOD-A6-B5: PRUEBAS DE VALIDACIÓN isValidHeap ---
+  // Bloque 5 : PRUEBAS DE VALIDACIÓN isValidHeap ---
   ods::PQ_ComplHeap<int> pqEmpty;
   assert(pqEmpty.isValidHeap()); // 1. Heap vacío
 
@@ -4393,3 +4392,1222 @@ Total Test time (real) =   0.23 sec
 
 * **¿Por qué conviene usar prioridades fijas en pruebas unitarias?**
     Porque para probar código necesitas que todo sea predecible y repetible. Si usas prioridades aleatorias (como hace el Treap normalmente), el árbol cambiará de forma cada vez que corras la prueba, haciendo imposible forzar y evaluar un escenario exacto.
+
+## Bloque 11 - Comparación con Semana 5: BinaryHeap, BinarySearchTree y Treap
+
+Revisamos:
+* `Semana5/include/BinaryHeap.h`
+* `Semana5/include/BinarySearchTree.h`
+* `Semana6/include/PQ_ComplHeap.h`
+*  `Semana6/include/Treap.h`
+* `Semana6/demos/demo_compare_with_semana5.cpp`
+* `Semana6/demos/demo_treap_basico.cpp`
+
+**Entregables del bloque:**
+
+* **Código completo de la demostración modificada (demo_compare_with_semana5.cpp) :** 
+```cpp
+#include <iostream>
+#include <vector>
+#include <iomanip>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  
+  const std::vector<int> xs{8, 3, 10, 1, 6, 14, 4, 7, 13};
+
+  ods::BinaryHeap<int> minHeap;
+  ods::PQ_ComplHeap<int> pq;
+  ods::BinarySearchTree<int> bst;
+  ods::Treap<int> treap(42); // Semilla 
+
+  // Insercion concurrente en las 4 estructuras
+  for (int x : xs) {
+    minHeap.add(x);
+    pq.insert(x);
+    bst.add(x);
+    treap.add(x);
+  }
+
+  std::cout << "=== EVIDENCIAS PRODUCIDAS ===\n";
+  std::cout << "1. BinaryHeap::top() (Min-Heap)  = " << minHeap.top() << "\n";
+  std::cout << "2. PQ_ComplHeap::getMax()        = " << pq.getMax() << "\n";
+  
+  std::cout << "3. BST inorder                   = ";
+  for (int x : bst.inorder()) std::cout << x << ' ';
+  std::cout << "\n";
+
+  std::cout << "4. Treap inorder                 = ";
+  for (int x : treap.inorderKeys()) std::cout << x << ' ';
+  std::cout << "\n   Treap raiz actual             = " << treap.root()->key << "\n\n";
+
+  std::cout << "=== TABLA DE COMPARACION ===\n";
+  std::cout << std::left 
+            << std::setw(18) << "Estructura" 
+            << std::setw(20) << "Op. Principal" 
+            << std::setw(24) << "Propiedad Mantenida" 
+            << std::setw(24) << "Op. Eficiente" 
+            << std::setw(24) << "Op. No Conviene" 
+            << "Evidencia\n";
+  std::cout << std::string(125, '-') << "\n";
+
+  std::cout << std::left 
+            << std::setw(18) << "BinaryHeap" 
+            << std::setw(20) << "add() / remove()" 
+            << std::setw(24) << "Padre <= Hijos (Min)" 
+            << std::setw(24) << "Extraer Min O(logN)" 
+            << std::setw(24) << "Busqueda Cotas O(N)" 
+            << "top() = " << minHeap.top() << "\n";
+
+  std::cout << std::left 
+            << std::setw(18) << "PQ_ComplHeap" 
+            << std::setw(20) << "insert() / delMax()" 
+            << std::setw(24) << "Padre >= Hijos (Max)" 
+            << std::setw(24) << "Extraer Max O(logN)" 
+            << std::setw(24) << "Busqueda Cotas O(N)" 
+            << "getMax() = " << pq.getMax() << "\n";
+
+  std::cout << std::left 
+            << std::setw(18) << "BinarySearchTree" 
+            << std::setw(20) << "add() / find()" 
+            << std::setw(24) << "Izq < Padre < Der" 
+            << std::setw(24) << "Rango/Cotas O(h)" 
+            << std::setw(24) << "Cola de Prioridad" 
+            << "Inorden ordenado\n";
+
+  std::cout << std::left 
+            << std::setw(18) << "Treap" 
+            << std::setw(20) << "add() / remove()" 
+            << std::setw(24) << "BST (X) + Heap (Y)" 
+            << std::setw(24) << "Busqueda Balanceada" 
+            << std::setw(24) << "Uso como simple Heap" 
+            << "Inorden + Raiz " << treap.root()->key << "\n";
+
+  std::cout << std::string(125, '-') << "\n";
+
+  return 0;
+}
+```
+
+* **Codigo completo del archivo demo_treap_basico.cpp:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <utility>
+#include <iomanip>
+#include <string>
+
+#include "Capitulo6.h"
+
+int main() {
+  ods::Treap<int> t(232);
+  
+
+  // === PARTE A ===
+  std::vector<std::pair<int, int>> sequenceA = {
+      {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
+  };
+
+  std::cout << "=== PARTE A: CONSTRUCCION DETERMINISTICA DE TREAP ===\n";
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+    std::cout << "------------------------------------------\n";
+    std::cout << "Insertado -> Clave: " << p.first << " | Prioridad: " << p.second << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nRaiz actual  : " << t.root()->key << "\n";
+    std::cout << "Validaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+
+  // === PARTE B ===
+  t.clear(); // Limpiamos para la prueba B
+  std::vector<std::pair<int, int>> sequenceB = {
+      {100, 100}, {90, 90}, {80, 80}, {70, 70}, {60, 60}
+  };
+
+  std::cout << "\n=== PARTE B: INSTRUMENTACION DE BUBBLEUP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(10) << "Clave" 
+            << std::setw(15) << "Prioridad" 
+            << std::setw(15) << "Rotaciones" 
+            << "Raiz actual\n";
+  std::cout << "---------------------------------------------------\n";
+
+  for (const auto& p : sequenceB) {
+    std::size_t rot = t.addWithPriorityCount(p.first, p.second);
+    std::cout << std::left << std::setw(10) << p.first 
+              << std::setw(15) << p.second 
+              << std::setw(15) << rot 
+              << t.root()->key << "\n";
+  }
+
+  // === PARTE C ===
+  t.clear(); // Limpiamos y reconstruimos la Parte A para la prueba C
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+  }
+
+  std::cout << "\n=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===\n";
+  std::cout << "ARBOL INICIAL:\n" << t << "\n";
+
+  std::vector<int> to_remove = {50, 20, 70};
+
+  for (int key : to_remove) {
+    std::cout << "---------------------------------------------------\n";
+    std::size_t rot = t.removeCount(key);
+    
+    std::cout << "Eliminado    : Clave " << key << " | Rotaciones: " << rot << "\n";
+    std::cout << "Inorden      : ";
+    for (int k : t.inorderKeys()) std::cout << k << " ";
+    std::cout << "\nPor niveles  : ";
+    for (int k : t.levelOrderKeys()) std::cout << k << " ";
+    std::cout << "\nValidaciones : isBST[" << (t.isBST() ? "SI" : "NO") 
+              << "] | isHeap[" << (t.isHeapByPriority() ? "SI" : "NO") 
+              << "] | isTreap[" << (t.isTreap() ? "SI" : "NO") << "]\n";
+  }
+  std::cout << "---------------------------------------------------\n";
+  std::cout << "ARBOL FINAL (ASCII ART):\n" << t << "\n";
+
+  // === PARTE D ===
+  t.clear(); // Limpiamos y reconstruimos la Parte A para la prueba D
+  for (const auto& p : sequenceA) {
+    t.addWithPriority(p.first, p.second);
+  }
+
+  std::cout << "\n=== PARTE D: BUSQUEDA ORDENADA EN TREAP ===\n";
+  std::cout << "---------------------------------------------------\n";
+  std::cout << std::left << std::setw(15) << "Operacion" 
+            << std::setw(10) << "Clave" 
+            << "Resultado\n";
+  std::cout << "---------------------------------------------------\n";
+
+  // Funcion lambda auxiliar para imprimir la tabla limpiamente
+  auto printSearch = [](const std::string& op, int val, auto* node) {
+    std::cout << std::left << std::setw(15) << op 
+              << std::setw(10) << val 
+              << (node ? std::to_string(node->key) : "NULL") << "\n";
+  };
+
+  printSearch("findEQ", 40, t.findEQ(40));
+  printSearch("findEQ", 35, t.findEQ(35));
+  printSearch("lowerBound", 35, t.lowerBound(35));
+  printSearch("lowerBound", 40, t.lowerBound(40));
+  printSearch("upperBound", 40, t.upperBound(40));
+  printSearch("upperBound", 75, t.upperBound(75));
+  std::cout << "---------------------------------------------------\n";
+
+  return 0;
+}
+```
+
+* **Codigo completo del archivo BinarySearchTree.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <functional>
+#include <stdexcept>
+#include <vector>
+
+#include "BinaryTree.h"
+
+namespace ods {
+
+template <typename T, typename Compare = std::less<T>>
+class BinarySearchTree : public BinaryTree<T> {
+ public:
+  using Node = typename BinaryTree<T>::Node;
+  using BinaryTree<T>::root_;
+  using BinaryTree<T>::updateHeight;
+  using BinaryTree<T>::updateHeightAbove;
+  using BinaryTree<T>::size_;
+
+  BinarySearchTree() = default;
+
+  explicit BinarySearchTree(Compare cmp) : comp_(cmp) {}
+
+  Node* findLast(const T& value) const {
+    Node* w = root_;
+    Node* prev = nullptr;
+    while (w != nullptr) {
+      prev = w;
+      if (comp_(value, w->data)) {
+        w = w->left;
+      } else if (comp_(w->data, value)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return prev;
+  }
+
+  Node* findEQ(const T& value) const {
+    Node* w = root_;
+    while (w != nullptr) {
+      if (comp_(value, w->data)) {
+        w = w->left;
+      } else if (comp_(w->data, value)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return nullptr;
+  }
+
+  Node* lowerBound(const T& value) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(value, w->data)) {
+        candidate = w;
+        w = w->left;
+      } else if (comp_(w->data, value)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return candidate;
+  }
+
+  Node* upperBound(const T& value) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(value, w->data)) {
+        candidate = w;
+        w = w->left;
+      } else {
+        w = w->right;
+      }
+    }
+    return candidate;
+  }
+
+  Node* find(const T& value) const {
+    return lowerBound(value);
+  }
+
+  Node* minNode() const {
+    return root_ == nullptr ? nullptr : root_->leftmost();
+  }
+
+  Node* maxNode() const {
+    return root_ == nullptr ? nullptr : root_->rightmost();
+  }
+
+  bool contains(const T& value) const { return findEQ(value) != nullptr; }
+
+  bool add(const T& value) {
+    Node* node = new Node(value);
+    if (!add(node)) {
+      delete node;
+      return false;
+    }
+    return true;
+  }
+
+  bool add(Node* node) {
+    node->left = nullptr;
+    node->right = nullptr;
+    node->height = 0;
+    Node* parent = findLast(node->data);
+    return addChild(parent, node);
+  }
+
+  bool addChild(Node* parent, Node* node) {
+    if (parent == nullptr) {
+      root_ = node;
+      node->parent = nullptr;
+      ++size_;
+      return true;
+    }
+
+    if (comp_(node->data, parent->data)) {
+      if (parent->left != nullptr) {
+        return false;
+      }
+      parent->left = node;
+    } else if (comp_(parent->data, node->data)) {
+      if (parent->right != nullptr) {
+        return false;
+      }
+      parent->right = node;
+    } else {
+      return false;
+    }
+
+    node->parent = parent;
+    ++size_;
+    updateHeightAbove(parent);
+    return true;
+  }
+
+  bool remove(const T& value) {
+    Node* u = findEQ(value);
+    if (u == nullptr) {
+      return false;
+    }
+    remove(u);
+    return true;
+  }
+
+  void remove(Node* node) {
+    if (node == nullptr) {
+      return;
+    }
+
+    if (node->left == nullptr || node->right == nullptr) {
+      splice(node);
+      delete node;
+      return;
+    }
+
+    Node* w = node->succ();
+    node->data = w->data;
+    splice(w);
+    delete w;
+  }
+
+  void splice(Node* node) {
+    Node* child = (node->left != nullptr) ? node->left : node->right;
+    Node* parent = node->parent;
+
+    if (node == root_) {
+      root_ = child;
+    } else if (node->isLeftChild()) {
+      parent->left = child;
+    } else {
+      parent->right = child;
+    }
+
+    if (child != nullptr) {
+      child->parent = parent;
+    }
+
+    --size_;
+    updateHeightAbove(parent);
+  }
+
+  void rotateLeft(Node* u) {
+    if (u == nullptr || u->right == nullptr) {
+      return;
+    }
+
+    Node* w = u->right;
+    w->parent = u->parent;
+
+    if (u->parent == nullptr) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+
+    u->right = w->left;
+    if (u->right != nullptr) {
+      u->right->parent = u;
+    }
+
+    w->left = u;
+    u->parent = w;
+
+    updateHeight(u);
+    updateHeight(w);
+    updateHeightAbove(w->parent);
+  }
+
+  void rotateRight(Node* u) {
+    if (u == nullptr || u->left == nullptr) {
+      return;
+    }
+
+    Node* w = u->left;
+    w->parent = u->parent;
+
+    if (u->parent == nullptr) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+
+    u->left = w->right;
+    if (u->left != nullptr) {
+      u->left->parent = u;
+    }
+
+    w->right = u;
+    u->parent = w;
+
+    updateHeight(u);
+    updateHeight(w);
+    updateHeightAbove(w->parent);
+  }
+
+  bool isBST() const {
+    return isBST(root_, nullptr, nullptr) && this->checkParentLinks();
+  }
+
+  static BinarySearchTree buildBalancedFromSorted(const std::vector<T>& sorted,
+                                                  Compare cmp = Compare{}) {
+    BinarySearchTree tree(cmp);
+    tree.root_ = buildBalancedRecursive(sorted, 0, static_cast<int>(sorted.size()), nullptr);
+    tree.size_ = sorted.size();
+    tree.updateHeightAbove(tree.root_);
+    return tree;
+  }
+
+  const Compare& comparator() const { return comp_; }
+
+ private:
+  Compare comp_{};
+
+  bool isBST(const Node* node, const T* low, const T* high) const {
+    if (node == nullptr) {
+      return true;
+    }
+    if (low != nullptr && !comp_(*low, node->data)) {
+      return false;
+    }
+    if (high != nullptr && !comp_(node->data, *high)) {
+      return false;
+    }
+    return isBST(node->left, low, &node->data) && isBST(node->right, &node->data, high);
+  }
+
+  static Node* buildBalancedRecursive(const std::vector<T>& sorted, int lo, int hi, Node* parent) {
+    if (lo >= hi) {
+      return nullptr;
+    }
+    const int mid = lo + (hi - lo) / 2;
+    Node* node = new Node(sorted[mid], parent);
+    node->left = buildBalancedRecursive(sorted, lo, mid, node);
+    node->right = buildBalancedRecursive(sorted, mid + 1, hi, node);
+    node->height = 1 + std::max(stature(node->left), stature(node->right));
+    return node;
+  }
+};
+
+}  // namespace ods
+
+```
+
+* **Codigo completo del archivo BinaryHeap.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <functional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+namespace ods {
+
+template <typename T, typename Compare = std::less<T>>
+class BinaryHeap {
+ public:
+  BinaryHeap() = default;
+
+  explicit BinaryHeap(const std::vector<T>& values) : data_(values) {
+    heapify();
+  }
+
+  explicit BinaryHeap(std::vector<T>&& values) : data_(std::move(values)) {
+    heapify();
+  }
+
+  static int left(int i) { return 2 * i + 1; }
+  static int right(int i) { return 2 * i + 2; }
+  static int parent(int i) { return (i - 1) / 2; }
+
+  bool empty() const { return data_.empty(); }
+  std::size_t size() const { return data_.size(); }
+
+  const T& top() const {
+    if (data_.empty()) {
+      throw std::out_of_range("Heap vacio");
+    }
+    return data_.front();
+  }
+
+  const std::vector<T>& data() const { return data_; }
+
+  bool add(const T& value) {
+    data_.push_back(value);
+    bubbleUp(static_cast<int>(data_.size()) - 1);
+    return true;
+  }
+
+  T remove() {
+    if (data_.empty()) {
+      throw std::out_of_range("Heap vacio");
+    }
+    T out = data_.front();
+    data_.front() = data_.back();
+    data_.pop_back();
+    if (!data_.empty()) {
+      trickleDown(0);
+    }
+    return out;
+  }
+
+  void clear() { data_.clear(); }
+
+  void bubbleUp(int i) {
+    while (i > 0) {
+      int p = parent(i);
+      if (!comp_(data_[i], data_[p])) {
+        break;
+      }
+      std::swap(data_[i], data_[p]);
+      i = p;
+    }
+  }
+
+  void trickleDown(int i) {
+    while (true) {
+      int best = i;
+      int l = left(i);
+      int r = right(i);
+
+      if (l < static_cast<int>(data_.size()) && comp_(data_[l], data_[best])) {
+        best = l;
+      }
+      if (r < static_cast<int>(data_.size()) && comp_(data_[r], data_[best])) {
+        best = r;
+      }
+      if (best == i) {
+        break;
+      }
+      std::swap(data_[i], data_[best]);
+      i = best;
+    }
+  }
+
+  void heapify() {
+    for (int i = static_cast<int>(data_.size()) / 2 - 1; i >= 0; --i) {
+      trickleDown(i);
+    }
+  }
+
+  bool isHeap() const {
+    return isHeapArray(data_, comp_);
+  }
+
+  static bool isHeapArray(const std::vector<T>& data, Compare comp = Compare{}) {
+    for (int i = 0; i < static_cast<int>(data.size()); ++i) {
+      const int l = left(i);
+      const int r = right(i);
+      if (l < static_cast<int>(data.size()) && comp(data[l], data[i])) {
+        return false;
+      }
+      if (r < static_cast<int>(data.size()) && comp(data[r], data[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+ private:
+  std::vector<T> data_{};
+  Compare comp_{};
+};
+
+}  // namespace ods
+
+```
+
+
+* **Codigo completo del archivo PQ_ComplHeap.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <functional>
+#include <initializer_list>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "PQ.h"
+#include "PQ_ComplHeap_delMax.h"
+#include "PQ_ComplHeap_getMax.h"
+#include "PQ_ComplHeap_heapifyFloyd.h"
+#include "PQ_ComplHeap_insert.h"
+#include "PQ_ComplHeap_macro.h"
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class PQ_ComplHeap : public PQ<T> {
+ public:
+  PQ_ComplHeap() = default;
+  explicit PQ_ComplHeap(Compare comp) : comp_(std::move(comp)) {}
+
+  explicit PQ_ComplHeap(std::vector<T> values, Compare comp = Compare{})
+      : data_(std::move(values)), comp_(std::move(comp)) {
+    heapify();
+  }
+
+  PQ_ComplHeap(std::initializer_list<T> values, Compare comp = Compare{})
+      : data_(values), comp_(std::move(comp)) {
+    heapify();
+  }
+
+  void insert(const T& e) override { complHeapInsert(data_, e, comp_); }
+
+  template <class InputIt>
+  void insertAll(InputIt first, InputIt last) {
+    for (; first != last; ++first) {
+      insert(*first);
+    }
+  }
+
+  T delMax() override { return complHeapDelMax(data_, comp_); }
+
+  const T& getMax() const override { return complHeapGetMax(data_); }
+  bool empty() const noexcept override { return data_.empty(); }
+  std::size_t size() const noexcept override { return data_.size(); }
+
+  void clear() noexcept { data_.clear(); }
+  void reserve(std::size_t n) { data_.reserve(n); }
+  void heapify() { complHeapHeapifyFloyd(data_, comp_); }
+
+  void rebuildFrom(std::vector<T> values) {
+    data_ = std::move(values);
+    heapify();
+  }
+
+  const std::vector<T>& data() const noexcept { return data_; }
+  static constexpr std::size_t parent(std::size_t i) noexcept { return pqParent(i); }
+  static constexpr std::size_t left(std::size_t i) noexcept { return pqLeftChild(i); }
+  static constexpr std::size_t right(std::size_t i) noexcept { return pqRightChild(i); }
+
+  bool isHeap() const {
+    for (std::size_t i = 0; i < data_.size(); ++i) {
+      const std::size_t l = left(i);
+      const std::size_t r = right(i);
+      if (l < data_.size() && comp_(data_[i], data_[l])) {
+        return false;
+      }
+      if (r < data_.size() && comp_(data_[i], data_[r])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // MOD-A6-B5: Función de validación explícita
+  bool isValidHeap() const {
+    for (std::size_t i = 0; i < data_.size(); ++i) {
+      const std::size_t l = left(i);
+      const std::size_t r = right(i);
+      
+      if (l < data_.size() && comp_(data_[i], data_[l])) {
+        return false;
+      }
+      if (r < data_.size() && comp_(data_[i], data_[r])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+ private:
+  std::vector<T> data_;
+  Compare comp_{};
+};
+
+}  // namespace ods
+```
+
+* **Codigo completo del archivo Treap.h:**  
+*(El archivo no fue modificado para este bloque)*
+
+```cpp
+#pragma once
+
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace ods {
+
+template <class T, class Compare = std::less<T>>
+class Treap {
+ public:
+  struct Node {
+    T key{};
+    std::uint64_t priority{0};
+    Node* parent{nullptr};
+    Node* left{nullptr};
+    Node* right{nullptr};
+
+    Node() = default;
+    Node(const T& value, std::uint64_t p, Node* par = nullptr)
+        : key(value), priority(p), parent(par) {}
+
+    bool isLeftChild() const { return parent != nullptr && parent->left == this; }
+    bool isRightChild() const { return parent != nullptr && parent->right == this; }
+  };
+
+  Treap() : rng_(232) {}
+  explicit Treap(std::uint64_t seed) : rng_(seed) {}
+  explicit Treap(Compare comp, std::uint64_t seed = 232) : comp_(std::move(comp)), rng_(seed) {}
+
+  Treap(const Treap&) = delete;
+  Treap& operator=(const Treap&) = delete;
+
+  Treap(Treap&& other) noexcept { swap(other); }
+  Treap& operator=(Treap&& other) noexcept {
+    if (this != &other) {
+      clear();
+      swap(other);
+    }
+    return *this;
+  }
+
+  ~Treap() { clear(); }
+
+  void clear() {
+    destroy(root_);
+    root_ = nullptr;
+    size_ = 0;
+  }
+
+  void swap(Treap& other) noexcept {
+    std::swap(root_, other.root_);
+    std::swap(size_, other.size_);
+    std::swap(comp_, other.comp_);
+    std::swap(rng_, other.rng_);
+    std::swap(priorityCounter_, other.priorityCounter_);
+  }
+
+  Node* root() const noexcept { return root_; }
+  std::size_t size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  Node* findLast(const T& x) const {
+    Node* w = root_;
+    Node* prev = nullptr;
+    while (w != nullptr) {
+      prev = w;
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return prev;
+  }
+
+  Node* findEQ(const T& x) const {
+    Node* w = root_;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return nullptr;
+  }
+
+  Node* lowerBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else if (comp_(w->key, x)) {
+        w = w->right;
+      } else {
+        return w;
+      }
+    }
+    return candidate;
+  }
+
+  Node* upperBound(const T& x) const {
+    Node* w = root_;
+    Node* candidate = nullptr;
+    while (w != nullptr) {
+      if (comp_(x, w->key)) {
+        candidate = w;
+        w = w->left;
+      } else {
+        w = w->right;
+      }
+    }
+    return candidate;
+  }
+
+  bool contains(const T& x) const { return findEQ(x) != nullptr; }
+
+  bool add(const T& x) { return addWithPriority(x, nextPriority()); }
+
+  bool addWithPriority(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return false;
+    }
+    bubbleUp(u);
+    return true;
+  }
+
+  // --- INICIO DE MODIFICACION PARTE B Y C ---
+  
+  std::size_t bubbleUpCount(Node* u) {
+    std::size_t rotations = 0;
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+      rotations++;
+    }
+    if (!u->parent) root_ = u;
+    return rotations;
+  }
+
+  std::size_t addWithPriorityCount(const T& x, std::uint64_t priority) {
+    Node* u = new Node(x, priority);
+    if (!addNode(u)) {
+      delete u;
+      return 0; 
+    }
+    return bubbleUpCount(u);
+  }
+
+  std::size_t trickleDownCount(Node* u) {
+    std::size_t rotations = 0;
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+      rotations++;
+    }
+    return rotations;
+  }
+
+  std::size_t removeCount(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return 0;
+    std::size_t rotations = trickleDownCount(u);
+    splice(u);
+    delete u;
+    return rotations;
+  }
+
+  // --- FIN DE MODIFICACION PARTE B Y C ---
+
+  bool remove(const T& x) {
+    Node* u = findEQ(x);
+    if (!u) return false;
+    trickleDown(u);
+    splice(u);
+    delete u;
+    return true;
+  }
+
+  void rotateLeft(Node* u) {
+    if (!u || !u->right) return;
+    Node* w = u->right;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->right = w->left;
+    if (u->right) u->right->parent = u;
+    w->left = u;
+    u->parent = w;
+  }
+
+  void rotateRight(Node* u) {
+    if (!u || !u->left) return;
+    Node* w = u->left;
+    w->parent = u->parent;
+    if (!u->parent) {
+      root_ = w;
+    } else if (u->isLeftChild()) {
+      u->parent->left = w;
+    } else {
+      u->parent->right = w;
+    }
+    u->left = w->right;
+    if (u->left) u->left->parent = u;
+    w->right = u;
+    u->parent = w;
+  }
+
+  void bubbleUp(Node* u) {
+    while (u->parent && u->parent->priority > u->priority) {
+      if (u->isRightChild()) {
+        rotateLeft(u->parent);
+      } else {
+        rotateRight(u->parent);
+      }
+    }
+    if (!u->parent) root_ = u;
+  }
+
+  void trickleDown(Node* u) {
+    while (u->left || u->right) {
+      if (!u->left) {
+        rotateLeft(u);
+      } else if (!u->right) {
+        rotateRight(u);
+      } else if (u->left->priority < u->right->priority) {
+        rotateRight(u);
+      } else {
+        rotateLeft(u);
+      }
+      if (root_ == u) root_ = u->parent;
+    }
+  }
+
+  std::vector<T> inorderKeys() const {
+    std::vector<T> out;
+    inorder(root_, out);
+    return out;
+  }
+
+  std::vector<T> levelOrderKeys() const {
+    std::vector<T> out;
+    std::queue<Node*> q;
+    if (root_) q.push(root_);
+    while (!q.empty()) {
+      Node* u = q.front();
+      q.pop();
+      out.push_back(u->key);
+      if (u->left) q.push(u->left);
+      if (u->right) q.push(u->right);
+    }
+    return out;
+  }
+
+  std::string asciiArt() const {
+    if (!root_) return "(treap vacio)\n";
+    std::vector<std::string> lines;
+    buildAscii(root_, "", true, lines);
+    std::ostringstream out;
+    for (const auto& line : lines) out << line << '\n';
+    return out.str();
+  }
+
+  bool isBST() const { return isBST(root_, nullptr, nullptr) && checkParents(root_, nullptr); }
+  bool isHeapByPriority() const { return isHeapByPriority(root_); }
+  bool isTreap() const { return isBST() && isHeapByPriority(); }
+
+ private:
+  Node* root_{nullptr};
+  std::size_t size_{0};
+  Compare comp_{};
+  std::mt19937_64 rng_;
+  std::uint64_t priorityCounter_{0};
+
+  std::uint64_t nextPriority() {
+    std::uint64_t raw = rng_();
+    return (raw << 16) ^ (++priorityCounter_);
+  }
+
+  bool addNode(Node* u) {
+    u->left = nullptr;
+    u->right = nullptr;
+    Node* p = findLast(u->key);
+    if (!p) {
+      root_ = u;
+      u->parent = nullptr;
+      ++size_;
+      return true;
+    }
+    if (comp_(u->key, p->key)) {
+      if (p->left) return false;
+      p->left = u;
+    } else if (comp_(p->key, u->key)) {
+      if (p->right) return false;
+      p->right = u;
+    } else {
+      return false;
+    }
+    u->parent = p;
+    ++size_;
+    return true;
+  }
+
+  void splice(Node* u) {
+    Node* s = u->left ? u->left : u->right;
+    if (u == root_) {
+      root_ = s;
+    } else if (u->isLeftChild()) {
+      u->parent->left = s;
+    } else {
+      u->parent->right = s;
+    }
+    if (s) s->parent = u->parent;
+    --size_;
+  }
+
+  static void destroy(Node* u) {
+    if (!u) return;
+    destroy(u->left);
+    destroy(u->right);
+    delete u;
+  }
+
+  static void inorder(Node* u, std::vector<T>& out) {
+    if (!u) return;
+    inorder(u->left, out);
+    out.push_back(u->key);
+    inorder(u->right, out);
+  }
+
+  bool isBST(Node* u, const T* low, const T* high) const {
+    if (!u) return true;
+    if (low && !comp_(*low, u->key)) return false;
+    if (high && !comp_(u->key, *high)) return false;
+    return isBST(u->left, low, &u->key) && isBST(u->right, &u->key, high);
+  }
+
+  static bool checkParents(Node* u, Node* parent) {
+    if (!u) return true;
+    if (u->parent != parent) return false;
+    return checkParents(u->left, u) && checkParents(u->right, u);
+  }
+
+  static bool isHeapByPriority(Node* u) {
+    if (!u) return true;
+    if (u->left && u->left->priority < u->priority) return false;
+    if (u->right && u->right->priority < u->priority) return false;
+    return isHeapByPriority(u->left) && isHeapByPriority(u->right);
+  }
+
+  static std::string nodeLabel(const Node* u) {
+    std::ostringstream out;
+    out << u->key << "|p=" << u->priority;
+    return out.str();
+  }
+
+  static void buildAscii(const Node* node, const std::string& prefix, bool isTail,
+                         std::vector<std::string>& lines) {
+    if (!node) return;
+    if (node->right) {
+      buildAscii(node->right, prefix + (isTail ? "│   " : "    "), false, lines);
+    }
+    lines.push_back(prefix + (isTail ? "└── " : "┌── ") + nodeLabel(node));
+    if (node->left) {
+      buildAscii(node->left, prefix + (isTail ? "    " : "│   "), true, lines);
+    }
+  }
+};
+
+template <class T, class Compare>
+inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
+  out << t.asciiArt();
+  return out;
+}
+
+}  // namespace ods
+```
+
+
+* **Salida de la demostración (Tabla comparativa simulada en consola):**
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ cmake --build build-debug --config Debug --target sem6_demo_compare_with_semana5
+[2/2] Linking CXX executable Semana6\sem6_demo_compare_with_semana5.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana6/sem6_demo_compare_with_semana5.exe
+=== EVIDENCIAS PRODUCIDAS ===
+1. BinaryHeap::top() (Min-Heap)  = 1
+2. PQ_ComplHeap::getMax()        = 14
+3. BST inorder                   = 1 3 4 6 7 8 10 13 14 
+4. Treap inorder                 = 1 3 4 6 7 8 10 13 14 
+   Treap raiz actual             = 4
+
+=== TABLA DE COMPARACION ===
+Estructura        Op. Principal       Propiedad Mantenida     Op. Eficiente           Op. No Conviene         Evidencia
+-----------------------------------------------------------------------------------------------------------------------------
+BinaryHeap        add() / remove()    Padre <= Hijos (Min)    Extraer Min O(logN)     Busqueda Cotas O(N)     top() = 1
+PQ_ComplHeap      insert() / delMax() Padre >= Hijos (Max)    Extraer Max O(logN)     Busqueda Cotas O(N)     getMax() = 14
+BinarySearchTree  add() / find()      Izq < Padre < Der       Rango/Cotas O(h)        Cola de Prioridad       Inorden ordenado
+Treap             add() / remove()    BST (X) + Heap (Y)      Busqueda Balanceada     Uso como simple Heap    Inorden + Raiz 4
+-----------------------------------------------------------------------------------------------------------------------------
+
+```
+
+
+### Tabla
+
+| Estructura | Operación Principal | Propiedad Mantenida | Operación Eficiente | Operación que No Conviene | Evidencia Producida |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BinaryHeap** | `add` / `remove` | Padre $\le$ Hijos (Min-Heap) | Extraer Mínimo en $O(\log N)$ | Búsqueda por cotas o inorden | `top() = 1` |
+| **PQ_ComplHeap** | `insert` / `delMax` | Padre $\ge$ Hijos (Max-Heap) | Extraer Máximo en $O(\log N)$ | Búsqueda por cotas o inorden | `getMax() = 14` |
+| **BinarySearchTree** | `add` / `find` | Izq $<$ Padre $<$ Der | Búsqueda de rangos en $O(h)$ | Uso como Cola de Prioridad pura | Inorden matemáticamente ordenado |
+| **Treap** | `add` / `remove` | BST (Claves) + Heap (Prioridad) | Búsqueda dinámica con balanceo | Reemplazar a un Heap en un array | Inorden ordenado + Raíz balanceada (10) |
+
+### Preguntas 
+
+* **¿Qué diferencia hay entre un heap de prioridad y un árbol de búsqueda?**
+  El Heap se organiza bajo un orden estrictamente **vertical** (relación jerárquica padre-hijo para exponer valores extremos). En contraste, el Árbol de Búsqueda (BST) se rige por un orden **horizontal** (de izquierda a derecha) para estructurar secuencias lógicas de datos.
+
+* **¿Por qué un BST permite recorrido ordenado y un heap no?**
+  Porque el BST impone una relación matemática estricta entre todas sus ramas ($izquierda < padre < derecha$). El Heap solo asegura que el padre sea mayor o menor que sus hijos inmediatos, pero no establece ninguna regla de orden entre nodos hermanos, impidiendo una lectura secuencial sin destruir la estructura.
+
+* **¿Qué agrega `PQ_ComplHeap` frente a un `BinaryHeap` educativo?**
+  Implementa una interfaz formal abstracta, modulariza algoritmos avanzados de construcción (como el método de Floyd), soporta comparadores dinámicos extensibles y está optimizado sobre arreglos contiguos para aplicaciones reales de alto rendimiento.
+
+* **¿Qué combina un Treap?**
+  Fusiona las propiedades semánticas de búsqueda de un BST (aplicadas a las claves de los datos) con la topología auto-balanceada de un Heap (aplicada a prioridades asignadas de forma aleatoria) para garantizar operaciones en tiempo $O(\log N)$.
+
+### Selección de Estructuras
+
+* **¿Qué estructura usarías para extraer máximos repetidamente?**
+  `PQ_ComplHeap`. Su almacenamiento contiguo en memoria plana maximiza la localidad de caché de la CPU y elimina la sobrecarga de punteros dinámicos.
+
+* **¿Qué estructura usarías para responder `lowerBound` o `upperBound`?**
+  `BinarySearchTree` si el flujo de inserciones es aleatorio, o un `Treap` si se requiere mitigar activamente el riesgo de desbalanceo ante datos ordenados.
+
+* **¿Qué estructura usarías si quieres búsqueda ordenada con balanceo probabilístico?**
+  `Treap`.
