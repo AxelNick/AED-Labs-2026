@@ -11,13 +11,41 @@
 - [x] Registro de mi nombre completo.
 - [x] Compilación y ejecución de demostraciones y pruebas.
 
+### Resolución de problemas de entorno (Codificación UTF-8)
+Durante las primeras pruebas, detecté que el arte ASCII de los árboles (líneas como ├── y └──) se imprimía en consola con caracteres extraños (ej. Ã¢â€œâ€). Esto se debió a un desajuste entre la codificación de la terminal UCRT64 (Windows) y la salida UTF-8 del código.
+
+Para solucionarlo y asegurar representaciones visuales limpias, añadi la codificación UTF-8 al inicio de las demostraciones (ej. demo_binary_tree.cpp) usando la API de Windows:
+
+```cpp
+// 1. Agregamos esta librería al inicio del archivo
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#include <iostream>
+// ... otros includes ...
+
+int main() {
+    // 2. Colocamos la sigueinte linea como la PRIMERA instrucción de nuestro main
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    // ... el resto es código normal ...
+    
+    return 0;
+}
+```
+*(Con este ajuste estructural, la compilación a través de CMake produjo ejecutables que la terminal pudo interpretar correctamente.)*
+
+
 ### Verificación de Entorno (Semana 5)
 
 **Estado de Compilación y Ejecución:**
 
 * **Demo ejecutada:** `sem5_demo_binary_tree.exe`
 
-```
+```bash
 $ ./sem5_demo_binary_tree.exe
 Arbol:
 │       ┌── 12
@@ -51,7 +79,7 @@ Parent links OK: si
 
 ### Pruebas públicas ejecutadas:
 
-```
+```bash
 $ ctest --test-dir build-debug -C Debug -R semana5 --output-on-failure
 Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/build-debug
     Start 20: semana5_public
@@ -260,8 +288,10 @@ A partir de las salidas obtenidas en la terminal, se presenta el análisis de lo
 ### Evidencias de Compilación y Ejecución
 
 #### `demo_binary_tree.cpp`
-```
-$ ./sem5_demo_binary_tree.exe
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana5/sem5_demo_binary_tree.exe
 Arbol:
 │       ┌── 12
 │   ┌── 10
@@ -292,8 +322,10 @@ Parent links OK: si
 ```
 
 #### `demo_bst.cpp`
-```
-$ ./sem5_demo_bst.exe
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana5/sem5_demo_bst.exe
 BST:
 │       ┌── 12
 │   ┌── 10
@@ -330,22 +362,28 @@ BST balanceado desde vector ordenado:
         └── 2
             └── 1
 isBST: si
+
 ```
 
 #### `demo_heap.cpp`
-```
-$ ./sem5_demo_heap.exe
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana5/sem5_demo_heap.exe
 Heapify: 1 3 2 7 5 8 10
 isHeap: si
 Tras add(0): 0 1 2 3 5 8 10 7
 remove() -> 0
 Tras remove(): 1 3 2 7 5 8 10
 Secuencia ordenada por extraccion: 1 2 3 5 7 8 10
+
 ```
 
 #### `demo_capitulo5_panorama.cpp`
-```
-$ ./sem5_demo_capitulo5_panorama.exe
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
+$ ./build-debug/Semana5/sem5_demo_capitulo5_panorama.exe
 Semana 5 final: BinaryTree, BST, heap, recorridos iterativos y utilidades
 Heap minimo actual: 1
 Raiz BST: 9
@@ -358,7 +396,8 @@ Arbol BST:
     │   ┌── 7
     └── 4
         └── 2
-Recorrido STL-like: 2 4 7 9 10 12 15
+Recorrido STL-like: 2 4 7 9 10 12 15 
+
 ```
 
 ### 1. En `demo_binary_tree.cpp`, ¿qué salida permite verificar que los recorridos visitan los nodos en el orden esperado?
@@ -430,10 +469,10 @@ Demuestran el manejo de árboles a nivel macro. Validan que se pueda pegar un á
 Revisan la mecánica fina debajo del capó. Confirman que girar el BST (`rotateLeft/Right`) cambia la raíz sin romper el orden, que `bubbleUp/trickleDown` realmente mueven los datos en el Heap, y que las matemáticas para calcular `depth`, `height` y moverse con `succ()/pred()` son exactas.
 
 ### 13. ¿Qué sí demuestra pasar las pruebas públicas?
-Demuestra que tu código hace lo que pide el problema para casos de uso normales, que no tiene errores de sintaxis y que las salidas concuerdan con los resultados previstos por el profesor.
+Demuestra que nuestro código hace lo que pide el problema para casos de uso normales, que no tiene errores de sintaxis y que las salidas concuerdan con los resultados previstos por el profesor.
 
 ### 14. ¿Qué no demuestra pasar las pruebas públicas?
-No garantiza que tu código sea óptimo en tiempo, ni que no existan fugas de memoria (memory leaks), ni asegura que el programa soporte casos extremos o maliciosos (por ejemplo, insertar una lista ordenada enorme que cause un Stack Overflow en el modo recursivo).
+No garantiza que nuestro código sea óptimo en tiempo, ni que no existan fugas de memoria (memory leaks), ni asegura que el programa soporte casos extremos o maliciosos (por ejemplo, insertar una lista ordenada enorme que cause un Stack Overflow en el modo recursivo).
 
 ### 15. ¿Por qué una defensa correcta debe mencionar invariantes y complejidad además de resultados observables?
 Porque en Estructuras de Datos, que un código "arroje el resultado correcto" es solo la mitad del trabajo. Debes argumentar que respeta las reglas matemáticas (invariantes) y que es eficiente en memoria y tiempo (complejidad), garantizando que la estructura aguantará cuando se use a gran escala.
@@ -445,8 +484,6 @@ Revisamos:
 * `Semana5/include/BinNode.h`
 * `Semana5/include/BinTree.h`
 * `Semana5/include/BinaryTree.h`
-
-### 7. Análisis del Código Fuente: BinNode, BinTree y BinaryTree
 
 ### 1. En BinNode, ¿qué invariantes deben mantenerse entre parent, left y right?
 Debe existir una relación bidireccional perfecta. Si un nodo A tiene como `left` o `right` a un nodo B, entonces el puntero `parent` del nodo B debe apuntar obligatoriamente de vuelta al nodo A.
@@ -642,7 +679,6 @@ Al aplicar `remove()` repetidamente se obtiene: 1, 2, 3, 5, 7, 8, 10. Salen orde
 
 
 ## Bloque 9 - Cierre comparativo y preparación de sustentación
-
 
 **¿Qué cambia cuando pasamos de estudiar listas, pilas y colas a diseñar árboles binarios, heaps y árboles binarios de búsqueda?**
 
