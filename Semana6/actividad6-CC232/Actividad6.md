@@ -4,6 +4,32 @@
 - **Nombre:** Axel Alberto Reyes Baldeón
 - **Código:** 20200485B
 
+### Resolución de problemas de entorno (Codificación UTF-8)
+Durante las primeras pruebas, detecté que el arte ASCII de los árboles (líneas como ├── y └──) se imprimía en consola con caracteres extraños (ej. Ã¢â€œâ€). Esto se debió a un desajuste entre la codificación de la terminal UCRT64 (Windows) y la salida UTF-8 del código.
+
+Para solucionarlo y asegurar representaciones visuales limpias, añadi la codificación UTF-8 al inicio de las demostraciones (ej. demo_binary_tree.cpp) usando la API de Windows:
+
+```cpp
+// 1. Agregamos esta librería al inicio del archivo
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#include <iostream>
+// ... otros includes ...
+
+int main() {
+    // 2. Colocamos la sigueinte linea como la PRIMERA instrucción de nuestro main
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    // ... el resto es código normal ...
+    
+    return 0;
+}
+```
+*(Con este ajuste estructural, la compilación a través de CMake produjo ejecutables que la terminal pudo interpretar correctamente.)*
 
 ## Bloque 1 - Diagnóstico inicial de la Semana 6
 
@@ -287,6 +313,11 @@ std::size_t complHeapPercolateUpCount(std::vector<T>& a, std::size_t i, Compare 
 *(Se añade al final de la función main en `demos/demo_pq_complheap_basico.cpp`, incluyendo `#include <functional>` al inicio del archivo)*
 
 ```cpp
+//
+#ifdef _WIN32
+#include <windows.h>
+#endif
+//
 #include <iostream>
 #include <vector>
 #include <functional> // Agregado para usar std::less
@@ -309,6 +340,13 @@ void printVector(const std::vector<T>& xs, const char* label) {
 
 
 int main() {
+
+  //
+  #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
+  //
+
   // PARTE ORIGINAL DE LA DEMO
   std::vector<int> base{4, 10, 7, 1, 3, 9};
   ods::PQ_ComplHeap<int> pq(base);
@@ -678,7 +716,6 @@ Antes de reparar: []
 Intercambios: 0
 Despues de reparar: []
 ------------------------
-
 
 ```
 
@@ -2171,13 +2208,17 @@ Revisamos:
 
 ### Parte A - Construcción determinística con prioridades fijas
 
-
 **Entregables del bloque:**
 
 * **Código completo de la demostración modificada (demo_treap_basico.cpp) :**  
-*(Se reemplazara todo el contenido en Libreria_cc232/Semana6/demos/demo_treap_basico.cpp con este código que inyecta los pares exactos que exige la rúbricas)*
+*(Aquí se incluye el bloque de código de la Parte A que inyecta la sequenceA y dibuja el árbol final)*
 
 ```cpp
+//
+#ifdef _WIN32
+#include <windows.h>
+#endif
+//
 #include <iostream>
 #include <vector>
 #include <utility>
@@ -2185,6 +2226,11 @@ Revisamos:
 #include "Capitulo6.h"
 
 int main() {
+  //
+  #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
+  //
   ods::Treap<int> t(232);
   
   // Secuencia de pares {clave, prioridad}
@@ -2792,7 +2838,7 @@ int main() {
 ```
 
 * **Salida de la demostración:**
-*(Evidencia de inserciones y ASCII Art final)*
+*(Aquí se incluye la evidencia de la consola mostrando las inserciones paso a paso y el ASCII Art final)*
 
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
@@ -2846,20 +2892,6 @@ Raiz actual  : 20
 Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
 ==========================================
 ARBOL FINAL (ASCII ART):
-Ôöé                       ÔöîÔöÇÔöÇ 80|p=80
-Ôöé                   ÔöîÔöÇÔöÇ 70|p=70
-Ôöé               ÔöîÔöÇÔöÇ 60|p=60
-Ôöé           ÔöîÔöÇÔöÇ 50|p=50
-Ôöé       ÔöîÔöÇÔöÇ 40|p=40
-Ôöé   ÔöîÔöÇÔöÇ 30|p=30
-ÔööÔöÇÔöÇ 20|p=20
-```
-*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
-
-Debio obtenerse algo como esto :
-
-```bash
-ARBOL FINAL (ASCII ART):
                         ┌── 80|p=80
                     ┌── 70|p=70
                 ┌── 60|p=60
@@ -2887,13 +2919,12 @@ ARBOL FINAL (ASCII ART):
   Intenta restaurar la propiedad de Min-Heap, asegurando que ningún nodo padre tenga una prioridad numérica mayor que la de cualquiera de sus hijos.
 
 
-
 ### Parte B - Instrumentación de bubbleUp
 
 **Entregables del bloque:**
 
 * **Codigo completo de archivo Treap.h modificado :**  
-
+*(Aquí se incluye el fragmento con la implementación de bubbleUpCount y addWithPriorityCount)*
 ```cpp
 #pragma once
 
@@ -3279,8 +3310,13 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 ```
 
 * **Codigo completo de archivo demo_treap_basico.cpp modificado nuevamente :**  
-
+*(Aquí se incluye el fragmento de la demostración que ejecuta el bucle de la Parte B y dibuja la tabla)*
 ```cpp
+//
+#ifdef _WIN32
+#include <windows.h>
+#endif
+//
 #include <iostream>
 #include <vector>
 #include <utility>
@@ -3289,6 +3325,11 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 #include "Capitulo6.h"
 
 int main() {
+  //
+  #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
+  //
   ods::Treap<int> t(232);
   
   // Secuencia combinada (Parte A y B en la misma demo)
@@ -3347,7 +3388,7 @@ int main() {
 ```
 
 * **Salida de la demostración:**
-*(Evidencia de la Consola (Tabla y Costo))*
+*(Aquí se incluye la tabla de consola que relaciona Clave, Prioridad y Rotaciones)*
 
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
@@ -3370,25 +3411,12 @@ Clave     Prioridad      Rotaciones     Raiz actual
 ---------------------------------------------------
 
 ARBOL FINAL (ASCII ART):
-Ôöé               ÔöîÔöÇÔöÇ 100|p=100
-Ôöé           ÔöîÔöÇÔöÇ 90|p=90
-Ôöé       ÔöîÔöÇÔöÇ 80|p=80
-Ôöé   ÔöîÔöÇÔöÇ 70|p=70
-ÔööÔöÇÔöÇ 60|p=60
-
-```
-
-*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
-
-Debio obtenerse algo como esto :
-
-```bash
-ARBOL FINAL (ASCII ART):
                 ┌── 100|p=100
             ┌── 90|p=90
         ┌── 80|p=80
     ┌── 70|p=70
 └── 60|p=60
+
 ```
 
 **Explicación del costo esperado :**
@@ -3418,6 +3446,7 @@ El uso de prioridades aleatorias en el Treap evita el peor caso estructural de $
 **Entregables del bloque:**
 
 * **Codigo completo de archivo Treap.h modificado :**  
+*(Aquí se incluye el fragmento con la adición de trickleDownCount y removeCount)*
 
 ```cpp
 #pragma once
@@ -3831,8 +3860,14 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 ```
 
 * **Codigo completo de archivo demo_treap_basico.cpp nuevamente modificado :**  
+*(Aquí se incluye el fragmento que ejecuta el arreglo to_remove y muestra el proceso de eliminación paso a paso)*
 
 ```cpp
+//
+#ifdef _WIN32
+#include <windows.h>
+#endif
+//
 #include <iostream>
 #include <vector>
 #include <utility>
@@ -3841,6 +3876,11 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 #include "Capitulo6.h"
 
 int main() {
+  //
+  #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
+  //
   ods::Treap<int> t(232);
   
   // Secuencia combinada (Parte A, B y C en la misma demo)
@@ -3917,6 +3957,7 @@ int main() {
 ```
 
 * **Salida de la demostración:**
+*(Aquí se incluye la evidencia de la consola mostrando las eliminaciones, las rotaciones contadas y el ASCII Art resultante)*
 
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
@@ -3929,45 +3970,6 @@ $ ./build-debug/Semana6/sem6_demo_treap_basico.exe
 ...
 === PARTE B: INSTRUMENTACION DE BUBBLEUP ===
 ...
-=== PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===
-ARBOL INICIAL:
-Ôöé                       ÔöîÔöÇÔöÇ 80|p=80
-Ôöé                   ÔöîÔöÇÔöÇ 70|p=70
-Ôöé               ÔöîÔöÇÔöÇ 60|p=60
-Ôöé           ÔöîÔöÇÔöÇ 50|p=50
-Ôöé       ÔöîÔöÇÔöÇ 40|p=40
-Ôöé   ÔöîÔöÇÔöÇ 30|p=30
-ÔööÔöÇÔöÇ 20|p=20
-
----------------------------------------------------
-Eliminado    : Clave 50 | Rotaciones: 1
-Inorden      : 20 30 40 60 70 80 
-Por niveles  : 20 30 40 60 70 80 
-Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
----------------------------------------------------
-Eliminado    : Clave 20 | Rotaciones: 1
-Inorden      : 30 40 60 70 80 
-Por niveles  : 30 40 60 70 80 
-Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
----------------------------------------------------
-Eliminado    : Clave 70 | Rotaciones: 1
-Inorden      : 30 40 60 80 
-Por niveles  : 30 40 60 80 
-Validaciones : isBST[SI] | isHeap[SI] | isTreap[SI]
----------------------------------------------------
-ARBOL FINAL (ASCII ART):
-Ôöé           ÔöîÔöÇÔöÇ 80|p=80
-Ôöé       ÔöîÔöÇÔöÇ 60|p=60
-Ôöé   ÔöîÔöÇÔöÇ 40|p=40
-ÔööÔöÇÔöÇ 30|p=30
-
-```
-
-*(Aclaracion : Se muestran estos caracteres extraños (Ôöé, Ôöî) porque la terminal de Windows suele tener problemas para interpretar los caracteres de la tabla ASCII extendida usados para dibujar el árbol ("│", "┌", "└"))* 
-
-Debio obtenerse algo como esto :
-
-```bash
 === PARTE C: INSTRUMENTACION DE TRICKLEDOWN ===
 
 ARBOL INICIAL:
@@ -4042,8 +4044,14 @@ La función `splice(50)` simplemente desconecta a `50` de su nuevo padre (`60`) 
 **Entregables del bloque:**
 
 * **Codigo completo de archivo demo_treap_basico.cpp modificado :**  
+*(Aquí se incluye el bloque final con la función lambda auxiliar y las consultas a findEQ, lowerBound y upperBound)*
 
 ```cpp
+//
+#ifdef _WIN32
+#include <windows.h>
+#endif
+//
 #include <iostream>
 #include <vector>
 #include <utility>
@@ -4053,9 +4061,13 @@ La función `splice(50)` simplemente desconecta a `50` de su nuevo padre (`60`) 
 #include "Capitulo6.h"
 
 int main() {
+  //
+  #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
+  //
   ods::Treap<int> t(232);
   
-
   // === PARTE A ===
   std::vector<std::pair<int, int>> sequenceA = {
       {50, 50}, {30, 30}, {70, 70}, {20, 20}, {40, 40}, {60, 60}, {80, 80}
@@ -4156,6 +4168,7 @@ int main() {
 ```
 
 * **Salida de la demostración:**
+*(Aquí se incluye la tabla impresa en consola validando los resultados de búsqueda)*
 
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
@@ -4182,7 +4195,6 @@ upperBound     40        50
 upperBound     75        80
 ---------------------------------------------------
 ```
-
 
 ### Tabla Comparativa: Treap vs BinarySearchTree
 
@@ -4222,6 +4234,7 @@ upperBound     75        80
 **Entregables del bloque:**
 
 * **Codigo completo de archivo test_internal_week6.cpp modificado :**  
+*(Aquí se incluye el bloque de asserts incorporado al final del archivo para validar específicamente los invariantes del Treap)*
 
 ```cpp
 #include <algorithm>
@@ -4351,6 +4364,7 @@ int main() {
 ```
 
 * **Compilación y ejecución de pruebas :**
+*(Aquí se incluye el bloque de comandos mostrando el 100% de tests passed a través de CTest)*
 
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
@@ -4406,6 +4420,8 @@ Revisamos:
 **Entregables del bloque:**
 
 * **Código completo de la demostración modificada (demo_compare_with_semana5.cpp) :** 
+*(Aquí se instancian de forma concurrente el BinaryHeap, PQ_ComplHeap, BinarySearchTree y Treap con la misma secuencia de datos, extrayendo los extremos y generando la tabla matriz de comparación en consola)*
+
 ```cpp
 #include <iostream>
 #include <vector>
@@ -5550,8 +5566,9 @@ inline std::ostream& operator<<(std::ostream& out, const Treap<T, Compare>& t) {
 }  // namespace ods
 ```
 
-
 * **Salida de la demostración (Tabla comparativa simulada en consola):**
+*(Aquí se incluye la salida de la terminal mostrando las evidencias producidas (top, getMax, inorden) y la tabla de propiedades y eficiencias algorítmicas)*
+
 ```bash
 AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232
 $ cmake --build build-debug --config Debug --target sem6_demo_compare_with_semana5
@@ -5576,7 +5593,6 @@ Treap             add() / remove()    BST (X) + Heap (Y)      Busqueda Balancead
 -----------------------------------------------------------------------------------------------------------------------------
 
 ```
-
 
 ### Tabla
 
