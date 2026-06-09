@@ -1,15 +1,19 @@
 # Respuestas Obligatorias - PC3 (ABC170 E - Smart Infants)
 
-### Preguntas Específicas del Problema 24
+### Preguntas Específicas
 
-1. **¿Qué guarda cada grupo?**
-   Guarda un Max-Heap que contiene objetos o pares con la fuerza (rate) y el ID de cada infante asignado a esa guardería, permitiendo consultar al infante más fuerte del grupo en $O(1)$.
+21. **¿Qué guarda cada grupo?**
+    Cada grupo (guardería) guarda internamente un Max-Heap. Este Heap almacena a los infantes asignados a esa guardería en un momento dado, manteniendo siempre en la cima al infante con el mayor nivel de fuerza (*rate*).
 
-2. **¿Qué guarda la estructura global?**
-    Guarda un Min-Heap que recolecta el valor máximo actual de cada guardería activa. Su cima representa la respuesta a la consulta: la guardería cuyo máximo es el menor de todos.
+22. **¿Qué guarda la estructura global?**
+    La estructura global guarda un Min-Heap. Su función es recolectar exclusivamente a los "representantes" de cada guardería (es decir, las cimas de cada Max-Heap local válido). Al ser un Min-Heap, su propia cima nos devuelve el valor mínimo de entre todos los máximos actuales.
 
-3. **¿Qué se actualiza cuando un niño cambia de grupo?**
-   Se actualiza un arreglo interno que rastrea la ubicación real del niño. Luego, el niño se inserta en el Max-Heap del nuevo grupo. En el grupo antiguo, se aplica *Lazy Deletion* (se marca lógicamente como ausente sin borrar el nodo del Heap). Finalmente, se insertan los nuevos máximos de ambas guarderías en el Min-Heap global.
+23. **¿Qué se actualiza cuando un niño cambia de grupo?**
+    Se actualizan tres elementos en tiempo $O(\log N)$: 
+    1. El arreglo plano `ubicacion_actual` con el nuevo destino del infante.
+    2. Se inserta al infante en el Max-Heap del nuevo grupo.
+    3. Se evalúa e inserta el posible nuevo máximo de ese grupo destino en el Min-Heap global. 
+    (El borrado físico del grupo original no se ejecuta; se posterga mediante *Lazy Deletion*).
 
 
 ### Preguntas Comunes Obligatorias

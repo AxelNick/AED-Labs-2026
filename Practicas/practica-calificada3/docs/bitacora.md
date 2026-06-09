@@ -10,14 +10,19 @@
  Integración de `std::multiset` como estructura secundaria auxiliar para mantener el mínimo global de los máximos en tiempo logarítmico. Cierre del ciclo de procesamiento en `main.cpp`.
 
  * **Día 4 (07/06/2026):** Implementación de las pruebas automatizadas en `test_smart_infants.cpp`. Cubriendo los 6 escenarios exigidos por la rúbrica: 
-  1. Caso mínimo garantizado.
-  2. Comportamiento ante guarderías vacías (colapso de Heaps).
-  3. Manejo estable de infantes con fuerza duplicada.
-  4. Simulación extrema de verificación manual.
-  5. Benchmark de rendimiento validando la optimización logarítmica frente a una solución ingenua en tiempo $O(N)$.
-  6. Verificación explícita del invariante principal (Lazy Deletion para la limpieza de nodos basura).
+    1. Caso mínimo garantizado.
+    2. Comportamiento ante guarderías vacías (colapso de Heaps).
+    3. Manejo estable de infantes con fuerza duplicada.
+    4. Simulación extrema de verificación manual.
+    5. Benchmark de rendimiento validando la optimización logarítmica frente a una solución ingenua en tiempo $O(N)$.
+    6. Verificación explícita del invariante principal (Lazy Deletion para la limpieza de nodos basura).
+  
   Adicionalmente, se actualizó el archivo `CMakeLists.txt` para integrar el ecosistema CTest, y se documentaron los resultados en los registros de evidencia textual (`tests_pc3.txt`, `casos_borde.txt` y `ejecucion_pc3.txt`). 
   Finalmente, se creó el archivo auxiliar `input.txt` para permitir la inyección rápida y automatizada del caso de prueba de AtCoder en la terminal.
 
   * **Día 5 (08/06/2026):** Redacción de la documentación técnica completa. Se elaboró el archivo `README.md` cumpliendo con la plantilla exigida por la rúbrica. Se documentaron las justificaciones de complejidad, diseño algorítmico y control de redundancias mediante Lazy Deletion en `respuestas_obligatorias.md`. 
   Finalmente, se desarrolló e implementó `benchmark_pc3.cpp` para validar el rendimiento empírico de $O(\log N)$ y registrar oficialmente el quinto día de trabajo en el historial del repositorio.
+
+  * **Día 6 (09/06/2026):** Se desarrollo la demostración interactiva en `demos/demo_smart_infants.cpp` para visualizar el comportamiento del *Lazy Deletion* y estructurar el caso de vaciado de grupo. 
+  Se optimizó el ecosistema de construcción en `CMakeLists.txt` unificando el main, tests, demo y benchmark (este último con bandera de optimización `-O3`). 
+  Finalmente, se actualizaron las `respuestas_obligatorias.md` modificando las 3 preguntas específicas del problema AtCoder ABC170 E para explciarlas mejor.
