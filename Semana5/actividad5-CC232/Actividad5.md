@@ -1,4 +1,4 @@
-# Actividad 5 - Semana 5
+## Actividad 5 - CC232
 
 ## Integrantes
 - Axel Alberto Reyes Baldeón
@@ -692,3 +692,13 @@ Al aplicar `remove()` repetidamente se obtiene: 1, 2, 3, 5, 7, 8, 10. Salen orde
 | **BST y ordenamiento** | El BST impone un orden estricto que hace las búsquedas rapidísimas (descartando mitades en cada paso) y nos regala los datos de menor a mayor con solo hacer un recorrido inorden. |
 | **Heap y rendimiento** | El Heap sacrifica el orden total para darnos acceso instantáneo al elemento de mayor prioridad. Aunque insertar y borrar cuesta O(log n), podemos construir toda la estructura de golpe en O(n) con `heapify`. |
 | **Evidencia de correctitud** | Ya no basta con ver que la demo imprima lo esperado. Ahora hay que usar pruebas para validar casos borde, trazar a mano la lógica, justificar el costo de tiempo (complejidad) y demostrar que los invariantes matemáticos no se rompieron. |
+
+### Autoevaluación breve
+
+- **Qué puedo defender con seguridad:** La diferencia estructural y de rendimiento entre la representación enlazada (BST, usando punteros) y la representación implícita (Heap, usando aritmética de índices en un arreglo), así como el costo temporal y espacial de sus operaciones principales.
+
+- **Qué todavía confundo:** El rastreo mental rápido para encontrar el predecesor o sucesor inorden cuando el nodo no tiene hijos directos y es necesario escalar por múltiples niveles de ancestros evaluando si provengo de la izquierda o la derecha.
+
+- **Qué evidencia usaría en una sustentación:** La salida de la terminal de `demo_bst.cpp` para probar que el recorrido inorden se mantiene inmutable tras múltiples inserciones y eliminaciones, y los resultados de `ctest` para garantizar que no rompí la bidireccionalidad de los punteros `parent`.
+
+- **Qué parte del código me parece más importante para revisar otra vez:** La manipulación exacta de los punteros dentro de las funciones `rotateLeft` y `rotateRight`, junto con la lógica de reconexión de `splice()`, ya que un solo enlace huérfano en estas operaciones compromete toda la estructura y genera fugas de memoria.
