@@ -5812,3 +5812,23 @@ Total Test time (real) =   0.22 sec
   14. **`Treap` conserva Heap post-inserción:** Detecta si el nuevo nodo, tras recibir una prioridad alta (aleatoria o asignada), se quedó estancado en el fondo en lugar de escalar (flotar) mediante `bubbleUp`.
 
   15. **`Treap` conserva propiedades post-eliminación:** Detecta un "hundimiento" indebido. Al eliminar un nodo, este debe rotar y bajar (`trickleDown`) forzosamente contra su hijo de *menor* prioridad; si lo hace contra el mayor, corromperá el Min-Heap.
+
+## Bloque 13 - Defensa escrita de modificaciones
+
+A continuación, presento el resumen de los aprendizajes y afirmaciones clave obtenidos al manipular su funcionamiento interno:
+
+| Concepto Requerido | Afirmación y aprendizaje |
+| :--- | :--- |
+| **Interfaz `PQ`** | Comprendí el valor de programar orientado a interfaces. Aislar el comportamiento lógico permite que algoritmos complejos (como Huffman) operen limpiamente sin importar cómo esté construida la cola por debajo. |
+| **Representación implícita (Heap)** | Aprendí que prescindir de punteros y usar aritmética de índices (`2i+1`, `2i+2`) en un vector no solo ahorra memoria masivamente, sino que explota la localidad de caché del procesador para saltos ultrarrápidos. |
+| **`percolateUp` (bubbleUp)** | Noté que es una operación mecánicamente directa, ya que el nodo que sube solo necesita compararse con un único ancestro (su padre) en cada paso. |
+| **`percolateDown` (trickleDown)** | Descubrí que es mucho más frágil y propensa a errores lógicos. Obliga a evaluar a los dos hijos simultáneamente y exige elegir estrictamente al extremo correcto antes de hundir el nodo para no quebrar la jerarquía. |
+| **`heapify` de Floyd** | Comprobé matemáticamente que procesar el arreglo de abajo hacia arriba (omitiendo las hojas) permite construir un montículo entero en tiempo lineal $O(N)$, algo que parecía contraintuitivo al inicio. |
+| **`heapSort`** | Entendí que la técnica de mover la raíz al final del arreglo repetidas veces nos da un algoritmo *in-place* muy robusto, capaz de ordenar datos con múltiples repetidos sin colapsar ni requerir memoria extra. |
+| **`merge` en Heap Izquierdista** | Aprendí que aquí la operación central no es insertar ni extraer, sino fusionar. Controlar el *Null Path Length* fuerza una rama derecha tan corta que unir dos árboles inmensos cuesta apenas $O(\log N)$. |
+| **Algoritmo de Huffman** | Vi en la práctica cómo la cola de prioridad es el motor que asegura que los símbolos más repetidos queden cerca de la raíz, garantizando siempre códigos libres de prefijos para una descompresión sin ambigüedades. |
+| **Treap (Rotaciones y Búsqueda)** | Validé empíricamente cómo el Treap une dos mundos opuestos: usa rotaciones locales para empujar prioridades aleatorias hacia arriba (Heap) sin quebrar jamás el orden horizontal que permite búsquedas exactas (BST). |
+| **Comparación (BinaryHeap vs BST)** | Concluí que un `BinaryHeap` en arreglo es imbatible en velocidad pura para extremos, y un `BinarySearchTree` es ideal para rangos pero vulnerable. El Treap destaca como un híbrido que usa el azar para evitar el desbalanceo sin la pesada burocracia de un AVL. |
+| **Pruebas, Invariantes y Casos Borde** | Aprendí que el código que "se ve bien" en consola no sirve sin validación. Forzar casos borde (ej. Huffman con un solo símbolo) y auditar invariantes (`isValidHeap`) tras borrar datos es el único escudo real contra la corrupción de memoria. |
+
+El desarrollo de la actividad me demostró que el verdadero dominio de las estructuras de datos no está en saber cómo se llaman, sino en entender exactamente qué se rompe cuando alteras un puntero o un índice en la memoria.
