@@ -5627,3 +5627,188 @@ Treap             add() / remove()    BST (X) + Heap (Y)      Busqueda Balancead
 
 * **¿Qué estructura usarías si quieres búsqueda ordenada con balanceo probabilístico?**
   `Treap`.
+
+## Bloque 12 - Pruebas obligatorias después de modificar código
+
+Volvemos a revisar :
+* `Semana6/pruebas_publicas/test_public_week6.cpp`
+* `Semana6/pruebas_internas/test_internal_week6.cpp`
+
+### Modificaciones realizadas:
+
+En `test_public_week6.cpp` integré las pruebas de interfaz y comportamiento (cambios de tamaño con getMax/delMax, ordenamiento con repetidos en heapSort, y casos borde de Huffman). En `test_internal_week6.cpp` incorporé las pruebas estructurales profundas para auditar que el estado interno (isValidHeap, isLeftistHeap, isTreap) sobreviva ileso tras secuencias agresivas de inserción, eliminación y fusión (merge).
+
+**Entregables del bloque:**
+
+* **Código completo de archivo test_public_week6.cpp modificado:** 
+*(Aquí se incluye las aserciones de interfaz pública, evaluando el comportamiento observable de los métodos getMax y delMax sobre el tamaño de la estructura, la estabilidad de heapSort ante datos colisionados y el manejo de casos borde en el generador de árboles de Huffman).*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+#include <string>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // PRUEBAS DE INTERFAZ PQ_ComplHeap
+  ods::PQ_ComplHeap<int> pq;
+  for (int x : {8, 3, 10, 1, 6}) pq.insert(x);
+
+  // 3. getMax no cambia el tamaño
+  std::size_t size_before = pq.size();
+  int max_val = pq.getMax();
+  assert(pq.size() == size_before);
+
+  // 4. delMax sí cambia el tamaño
+  int removed_val = pq.delMax();
+  assert(pq.size() == size_before - 1);
+  assert(removed_val == max_val);
+
+  // 6. heapSort ordena con repetidos
+  std::vector<int> xs{5, 1, 8, 3, 2, 8, 5, 1};
+  ods::heapSort(xs);
+  assert((xs == std::vector<int>{1, 1, 2, 3, 5, 5, 8, 8}));
+
+  // PRUEBAS DE INTERFAZ HUFFMAN
+  const std::vector<ods::HuffmanSymbol> s{{'a', 45}, {'b', 13}, {'c', 12}, 
+                                          {'d', 16}, {'e', 9},  {'f', 5}};
+  const auto codes = ods::huffmanGenerateCodes(s);
+  
+  // 10. Produce códigos para todos los símbolos con frecuencia positiva
+  assert(codes.size() == s.size());
+  for (const auto& sym : s) {
+    assert(codes.find(sym.symbol) != codes.end());
+  }
+
+  // 11. Produce códigos libres de prefijos
+  assert(ods::huffmanIsPrefixFree(codes));
+
+  // 12. Maneja correctamente el caso de un solo símbolo
+  const std::vector<ods::HuffmanSymbol> single_s{{'z', 100}};
+  const auto single_code = ods::huffmanGenerateCodes(single_s);
+  assert(single_code.size() == 1);
+  assert(!single_code.at('z').empty());
+
+  return 0;
+}
+```
+
+* **Código completo de archivo test_internal_week6.cpp modificado:** 
+*(Aquí se incluye las aserciones estructurales profundas, verificando que los invariantes matemáticos isValidHeap, isLeftistHeap y isTreap se mantengan verdaderos tras ejecutar operaciones destructivas como inserciones, eliminaciones y fusiones).*
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <vector>
+
+#include "Capitulo5.h"
+#include "Capitulo6.h"
+
+int main() {
+  // PRUEBAS ESTRUCTURALES PQ_ComplHeap
+  ods::PQ_ComplHeap<int> pq;
+
+  // 1. Conserva la propiedad heap después de cada inserción
+  for (int x : {8, 3, 10, 1, 6, 14, 4, 7}) {
+    pq.insert(x);
+    assert(pq.isValidHeap());
+  }
+
+  // 2. Conserva la propiedad heap después de cada eliminación
+  pq.delMax();
+  assert(pq.isValidHeap());
+
+  // 5. heapifyFloyd produce un heap válido
+  ods::PQ_ComplHeap<int> pqHeapify(std::vector<int>{15, 2, 8, 1, 99, 4});
+  assert(pqHeapify.isValidHeap());
+
+  // PRUEBAS ESTRUCTURALES PQ_LeftHeap
+  ods::PQ_LeftHeap<int> lh1{20, 7, 18};
+  ods::PQ_LeftHeap<int> lh2{19, 8, 4};
+  
+  // 7. Conserva su propiedad después de merge
+  lh1.merge(lh2);
+  assert(lh1.isLeftistHeap());
+  
+  // 8. Conserva su propiedad después de insert
+  lh1.insert(25);
+  assert(lh1.isLeftistHeap());
+
+  // 9. Conserva su propiedad después de delMax
+  lh1.delMax();
+  assert(lh1.isLeftistHeap());
+
+  // PRUEBAS ESTRUCTURALES TREAP
+  ods::Treap<int> t(12345);
+  
+  // 13. Conserva propiedad BST después de insertar
+  // 14. Conserva propiedad de heap por prioridad después de insertar
+  t.addWithPriority(50, 50);
+  t.addWithPriority(30, 30);
+  t.addWithPriority(70, 70);
+  assert(t.isTreap()); // isTreap() audita internamente isBST() e isHeapByPriority()
+
+  // 15. Conserva ambas propiedades después de eliminar
+  t.remove(30);
+  assert(t.isTreap());
+
+  return 0;
+}
+```
+
+* **Compilación y ejecución de pruebas:**
+*(Aquí se incluye la salida de la terminal demostrando que el comando ctest --output-on-failure validó el 100% de las pruebas, confirmando la solidez de las implementaciones)*
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ cmake --build build-debug --config Debug
+[20/20] Linking CXX executable sem6_test_public.exe
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6
+$ ctest --test-dir build-debug -R semana6 --output-on-failure
+Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232/Libreria_cc232/Semana6/build-debug
+    Start 1: semana6_public
+1/2 Test #1: semana6_public ...................   Passed    0.11 sec
+    Start 2: semana6_internal
+2/2 Test #2: semana6_internal .................   Passed    0.10 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.22 sec
+```
+
+### Explicación de bugs atrapados por cada prueba
+
+  1. **Propiedad heap post-inserción (`PQ_ComplHeap`):** Detecta si `bubbleUp` falla al detenerse antes de tiempo o si intercambia con el hijo incorrecto, lo cual corrompería el máximo esperado en la raíz.
+
+  2. **Propiedad heap post-eliminación (`PQ_ComplHeap`):** Detecta si `trickleDown` elige hundir la nueva raíz hacia el hijo de menor valor en lugar del mayor (o viceversa), destruyendo la estructura piramidal.
+
+  3. **`getMax` no cambia tamaño:** Detecta un bug crítico de diseño donde una operación declarada como lectura (`const`) altera accidentalmente la estructura interna (por ejemplo, ejecutando un `pop_back` involuntario).
+
+  4. **`delMax` sí cambia tamaño:** Detecta una fuga de memoria lógica. Si el algoritmo reacomoda el arreglo pero olvida restar `-1` al contador o achicar el vector, la estructura arrastrará basura ("fantasmas") de manera perpetua.
+
+  5. **`heapifyFloyd` produce heap válido:** Detecta si el bucle constructor itera en el orden equivocado (de arriba hacia abajo en lugar de abajo hacia arriba) u omite procesar la mitad superior del arreglo.
+
+  6. **`heapSort` con repetidos:** Detecta inestabilidades de comparación. Si se usan comparadores estrictos (`<` en vez de `<=`) de forma incorrecta, el algoritmo podría entrar en bucles infinitos al evaluar repetidos, o sobrescribir datos y perder información.
+
+  7. **`PQ_LeftHeap` post `merge`:** Detecta si el algoritmo olvida recalcular el *Null Path Length* (NPL) tras fusionar ramas, lo que arruinaría el balanceo sesgado hacia la izquierda y degradaría su tiempo $O(\log N)$.
+
+  8. **`PQ_LeftHeap` post `insert`:** Detecta si, al tratar la inserción como un mini-merge de 1 nodo, la estructura no propaga la actualización de longitud hacia la raíz.
+
+  9. **`PQ_LeftHeap` post `delMax`:** Verifica que al destruir la raíz y hacer `merge` de los subárboles huérfanos izquierdo y derecho, el resultado siga siendo un Leftist Heap válido.
+
+  10. **Huffman cubre todos los símbolos:** Detecta si la cola de prioridad ignoró ramas durante las fusiones, provocando que ciertos caracteres queden fuera del árbol final, haciendo imposible descomprimir esos caracteres.
+
+  11. **Huffman libre de prefijos:** Atrapa el error más grave de compresión: si el código de la letra 'A' es "01" y el de la 'B' es "011", el decodificador jamás sabrá distinguir ambas. Esta aserción confirma que todos los símbolos se alojan estrictamente en hojas.
+
+  12. **Huffman con un solo símbolo:** Atrapa un error de caso borde (*Edge Case*). La mayoría de implementaciones extraen de a dos nodos de la cola. Si hay solo uno, el algoritmo podría generar un *Segmentation Fault* por acceso a memoria nula si no se programó una condición de escape.
+
+  13. **`Treap` conserva BST post-inserción:** Detecta si las rotaciones giran los punteros de manera torpe, provocando que un nodo mayor termine a la izquierda de su padre, lo que anularía las capacidades de búsqueda binaria instantánea.
+
+  14. **`Treap` conserva Heap post-inserción:** Detecta si el nuevo nodo, tras recibir una prioridad alta (aleatoria o asignada), se quedó estancado en el fondo en lugar de escalar (flotar) mediante `bubbleUp`.
+
+  15. **`Treap` conserva propiedades post-eliminación:** Detecta un "hundimiento" indebido. Al eliminar un nodo, este debe rotar y bajar (`trickleDown`) forzosamente contra su hijo de *menor* prioridad; si lo hace contra el mayor, corromperá el Min-Heap.
