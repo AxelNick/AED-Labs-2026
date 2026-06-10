@@ -25,4 +25,5 @@
 
   * **Día 6 (09/06/2026):** Se desarrollo la demostración interactiva en `demos/demo_smart_infants.cpp` para visualizar el comportamiento del *Lazy Deletion* y estructurar el caso de vaciado de grupo. 
   Se optimizó el ecosistema de construcción en `CMakeLists.txt` unificando el main, tests, demo y benchmark (este último con bandera de optimización `-O3`). 
-  Finalmente, se actualizaron las `respuestas_obligatorias.md` modificando las 3 preguntas específicas del problema AtCoder ABC170 E para explciarlas mejor.
+  En el apartado de documentación, se actualizaron las respuestas_obligatorias.md mejorando la explicación de las 3 preguntas específicas del problema AtCoder ABC170 E.
+  Además, se concluyó la Actividad 6 (incluyendo la instrumentación del Treap, pruebas de invariantes y defensa escrita) y se aplicaron correcciones menores de formato visual y adición de autoevaluaciones en las Actividades 4 y 5.
