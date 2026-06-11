@@ -61,12 +61,39 @@ cmake --build build
 ```
 
 #### Pruebas
-1. **Caso mínimo garantizado:** Valida la estructura con 1 solo infante y 1 transferencia.
-2. **Caso con estructura vacía / frontera:** Verifica que al vaciar una guardería, el sistema detecte la ausencia de infantes, retorne `-1` y la elimine lógicamente del mínimo global.
-3. **Manejo de duplicados o empates:** Evalúa la estabilidad matemática cuando varios niños tienen exactamente la misma fuerza en el mismo grupo.
-4. **Caso extremo pequeño verificable manualmente:** Simula 3 infantes uniéndose progresivamente en una sola guardería para comprobar el agrupamiento y descarte de los grupos anteriores.
-5. **Comparación contra solución ingenua:** Contrasta el resultado del algoritmo óptimo en $O(\log N)$ contra un cálculo de fuerza bruta mediante iteración de arreglos en $O(N)$ para asegurar precisión matemática.
-6. **Prueba específica del invariante (Lazy Deletion):** Valida que el Heap ignore correctamente a los "fantasmas" (niños que ya se mudaron y siguen en la cima) y reporte el máximo real sin corromper el estado global.
+
+He programado 6 aserciones críticas en `test_smart_infants.cpp`. A continuación, el detalle exigido:
+
+##### 1. Caso mínimo garantizado
+* **Entrada usada:** 1 infante (Fuerza 10, Guardería 1), movido a Guardería 2.
+* **Salida esperada:** Mínimo global 10.
+* **Salida obtenida:** 10.
+* **Qué aspecto valida:** Correctitud básica y que el sistema no colapse con $N=1$.
+
+##### 2. Caso con estructura vacía / frontera
+* **Entrada usada:** 2 infantes en Guardería 1. Ambos son movidos a la Guardería 2.
+* **Salida esperada:** Guardería 1 reporta fuerza -1 (vacía).
+* **Salida obtenida:** -1.
+* **Qué aspecto valida:** Demuestra que al vaciar un grupo, el sistema lo detecta y lo retira del multiset global, superando el reto de "ausencia de respuesta".
+
+##### 3. Manejo de duplicados o empates
+* **Entrada usada:** Dos infantes con fuerza exacta de 100 en la Guardería 1. Se transfiere a uno de ellos.
+* **Salida esperada:** El máximo de la Guardería 1 sigue siendo 100.
+* **Salida obtenida:** 100.
+* **Qué aspecto valida:** Estabilidad matemática ante colisiones de fuerza.
+
+##### 4. Comparación contra solución ingenua (Fuerza Bruta)
+* **Entrada usada:** Arreglos aleatorios pequeños iterados.
+* **Salida esperada:** Resultado idéntico entre cálculo ingenuo iterativo y estructura de Heaps.
+* **Salida obtenida:** `Test Passed`.
+* **Qué aspecto valida:** Exactitud matemática absoluta (cumple el Reto Transversal de comparar versiones).
+
+##### 5. Prueba específica del invariante (Lazy Deletion)
+* **Entrada usada:** Infante fuerte (rate 50) y débil (rate 20) en Guardería 1. El infante fuerte es transferido a Guardería 2.
+* **Salida esperada:** El nuevo máximo de la Guardería 1 es 20 (el 50 obsoleto es ignorado).
+* **Salida obtenida:** 20.
+* **Qué aspecto valida:** Verifica explícitamente que el Lazy Deletion limpia al "fantasma" sin alterar el estado del sistema.
+
 
 #### Evidencia Git
 Comandos ejecutados para registrar el proceso:

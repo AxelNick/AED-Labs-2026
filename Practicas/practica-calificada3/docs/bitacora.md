@@ -6,8 +6,10 @@
  * **Día 2 (05/06/2026):** Importación de la clase `PQ_ComplHeap` desde la Actividad de la Semana 6 hacia la carpeta `include` del proyecto. Ademas se incluyo los otros archivos relacionados con esto para evitar errores o rupturas del codigo.
  Creación de la clase base `SmartInfants` en C++ estableciendo arreglos paralelos para control de fuerza y ubicación de infantes en tiempo $O(1)$. Configuración de un `std::vector` de Heaps para representar las 200,000 guarderías posibles. Configuración inicial del `CMakeLists.txt` y lectura de datos en `src/main.cpp`.
 
- * **Día 3 (06/06/2026):** Modificación del Heap para almacenar `std::pair<int, int>` permitiendo vincular con el ID del infante. Implementación de la función `limpiar_guarderia` utilizando el concepto de **Lazy Deletion** para depurar en $O(\log N)$ las cimas de los Heaps que contienen niños ya transferidos. 
- Integración de `std::multiset` como estructura secundaria auxiliar para mantener el mínimo global de los máximos en tiempo logarítmico. Cierre del ciclo de procesamiento en `main.cpp`.
+ * **Día 3 (06/06/2026):** Modificación del Heap para almacenar `std::pair<int, int>` permitiendo vincular con el ID del infante. 
+  Implementación de la función `limpiar_guarderia` utilizando el concepto de *Lazy Deletion*.
+  Error encontrado (en pruebas locales previas al commit):Noté en mis testeos de consola que si usaba `maximos_globales.erase(valor)`, el `multiset` eliminaba todos los máximos de otras guarderías que tuvieran la casualidad de tener el mismo puntaje.
+  Refactorización:Antes de consolidar el archivo en el repositorio, refactoricé la instrucción utilizando iteradores: `maximos_globales.erase(maximos_globales.find(valor))`. Esto garantiza borrar solo una instancia a la vez, blindando el código contra bugs de colisión de puntajes. Integración final del ciclo en `main.cpp`.
 
  * **Día 4 (07/06/2026):** Implementación de las pruebas automatizadas en `test_smart_infants.cpp`. Cubriendo los 6 escenarios exigidos por la rúbrica: 
     1. Caso mínimo garantizado.

@@ -8,7 +8,7 @@
 
 22. **¿Qué guarda la estructura global?**
     
-    La estructura global guarda un Min-Heap. Su función es recolectar exclusivamente a los "representantes" de cada guardería (es decir, las cimas de cada Max-Heap local válido). Al ser un Min-Heap, su propia cima nos devuelve el valor mínimo de entre todos los máximos actuales.
+    La estructura global guarda un Min-Heap conceptual (implementado físicamente mediante un std::multiset auxiliar en C++). Su función es recolectar exclusivamente a los "representantes" de cada guardería (es decir, las cimas válidas de cada Max-Heap local). Al estar ordenado, el primer elemento (.begin()) nos devuelve al instante el valor mínimo de entre todos los máximos actuales.
 
 23. **¿Qué se actualiza cuando un niño cambia de grupo?**
     
