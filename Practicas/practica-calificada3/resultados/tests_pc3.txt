@@ -1,50 +1,51 @@
 
-REPORTE DE PRUEBAS AUTOMATIZADAS (CTEST) : ATCODER ABC170 E - SMART INFANTS
+REPORTE DE PRUEBAS AUTOMATIZADAS (CTEST) : ATCODER ABC170 E
 
 Comando de ejecución:
-./build/test_smart_infants.exe
+$ ./build/test_smart_infants.exe
 
 ---- PRUEBAS FUNCIONALES Y DE RENDIMIENTO ----
 
-[TEST 1] - VERIFICACIÓN DE INVARIANTE (LAZY DELETION)
+--------------------------------------------------------------------------------
+ [TEST 1] - VERIFICACIÓN DE INVARIANTE (LAZY DELETION)
 
-Objetivo: Validar que el sistema ignora las cimas de Heap obsoletas
+ Objetivo           : Validar que el sistema ignora las cimas de Heap obsoletas.
+ Estado Inicial     : G1={N1:100, N2:50} -> minGlobal esperado = 100.
+ Operación          : Mover N1 a G2. 
+ Validación Crítica : El Heap de G1 aún tiene el '100' en memoria, pero el 
+                      algoritmo lo descarta exitosamente mediante Lazy Deletion.
 
-Estado Inicial: G1={N1:100, N2:50} -> minGlobal esperado = 100
-
-Operación: Mover N1 a G2. 
-
-Validación: El Heap de G1 aún tiene el '100' en memoria, pero el algoritmo lo descarta mediante Lazy Deletion
-
-Resultado Esperado: minGlobal = 50
-Resultado Obtenido: 50
-Terminal : "[OK] Test 6: Invariante principal (Lazy Deletion) pasado"
-
-[TEST 2] - CASO DE EMPATE Y DUPLICADOS
-
-Objetivo: Asegurar que el sistema no elimina infantes válidos cuando existen duplicados
-
-Estado Inicial: G1={N1:80, N2:80}, G2={N3:90} -> minGlobal = 80
-
-Operación: Mover N1 a G3
-
-Validación: G1 pierde un 80, pero el máximo sigue siendo 80 gracias a N2
-
-Resultado Esperado: minGlobal = 80
-Resultado Obtenido: 80
-Terminal : "[OK] Test 3: Duplicados y empates pasado"
+ Resultado Esperado : minGlobal = 50
+ Resultado Obtenido : 50
+ Salida Terminal    : [OK] Test 6: Invariante principal (Lazy Deletion) pasado
 
 
-[TEST 3] - BENCHMARK: ESTRUCTURA OPTIMIZADA VS SOLUCIÓN INGENUA O(N)
+--------------------------------------------------------------------------------
+ [TEST 2] - CASO DE EMPATE Y DUPLICADOS
 
-Objetivo: Confirmar la exactitud matemática del algoritmo O(log N)
+ Objetivo           : Asegurar que el sistema no elimina infantes válidos cuando 
+                      existen duplicados físicos o empates lógicos.
+ Estado Inicial     : G1={N1:80, N2:80}, G2={N3:90} -> minGlobal = 80.
+ Operación          : Mover N1 a G3.
+ Validación Crítica : G1 pierde un 80, pero el máximo sigue siendo 80 gracias 
+                      a la presencia de N2 en la estructura.
 
-Entrada: 4 Infantes, {45, 12, 89, 34}
+ Resultado Esperado : minGlobal = 80
+ Resultado Obtenido : 80
+ Salida Terminal    : [OK] Test 3: Duplicados y empates pasado
 
-Solución Ingenua (Vector): Mínimo de máximos = 45
-Solución Optimizada (Heaps + Multiset): Mínimo de máximos = 45
 
-Validación: getMinGlobal() == min_global_ingenuo
-Terminal : "[OK] Test 5: Benchmark vs Solucion Ingenua pasado"
+--------------------------------------------------------------------------------
+ [TEST 3] - BENCHMARK: ESTRUCTURA OPTIMIZADA VS SOLUCIÓN INGENUA O(N)
 
-RESUMEN DE CTEST: 100% pruebas funcionales exitosas
+ Objetivo           : Confirmar la exactitud matemática del algoritmo O(log N).
+ Entrada            : 4 Infantes, {45, 12, 89, 34}.
+
+ Solución Ingenua   : Mínimo de máximos = 45 (Iteración de Vector)
+ Sol. Optimizada    : Mínimo de máximos = 45 (Heaps + Multiset)
+ Validación Crítica : getMinGlobal() == min_global_ingenuo
+
+ Salida Terminal    : [OK] Test 5: Benchmark vs Solucion Ingenua pasado
+
+--------------------------------------------------------------------------------
+ RESUMEN DE CTEST   : 100% pruebas funcionales exitosas

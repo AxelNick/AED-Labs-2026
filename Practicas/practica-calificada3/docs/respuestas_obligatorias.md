@@ -3,12 +3,15 @@
 ### Preguntas Específicas
 
 21. **¿Qué guarda cada grupo?**
+    
     Cada grupo (guardería) guarda internamente un Max-Heap. Este Heap almacena a los infantes asignados a esa guardería en un momento dado, manteniendo siempre en la cima al infante con el mayor nivel de fuerza (*rate*).
 
 22. **¿Qué guarda la estructura global?**
+    
     La estructura global guarda un Min-Heap. Su función es recolectar exclusivamente a los "representantes" de cada guardería (es decir, las cimas de cada Max-Heap local válido). Al ser un Min-Heap, su propia cima nos devuelve el valor mínimo de entre todos los máximos actuales.
 
 23. **¿Qué se actualiza cuando un niño cambia de grupo?**
+    
     Se actualizan tres elementos en tiempo $O(\log N)$: 
     1. El arreglo plano `ubicacion_actual` con el nuevo destino del infante.
     2. Se inserta al infante en el Max-Heap del nuevo grupo.
@@ -19,63 +22,86 @@
 ### Preguntas Comunes Obligatorias
 
 1. **¿Cuál es el problema exacto asignado?**
+   
    Problema *AtCoder ABC170 E - Smart Infants*
 
 2. **¿Qué recibe la entrada y qué produce la salida?**
+   
    La entrada consiste en $N$ infantes, definidos por su nivel inicial (rate) y la guardería a la que pertenecen, seguidos de $Q$ consultas de transferencia. 
    La salida requerida es el mínimo de los valores máximos actuales de cada guardería tras ejecutar cada transferencia.
 
 3. **¿Cuál es la restricción que vuelve insuficiente una solución ingenua?**
+   
    Los parámetros $N$ y $Q$ pueden alcanzar valores de hasta $2\times 10^5$. Una complejidad algorítmica cuadrática excedería el límite de tiempo de ejecución.
 
 4. **¿Cuál sería la solución ingenua y cuál es su complejidad?**
+   
    Consistiría en actualizar el estado en arreglos unidimensionales y recalcular iterativamente el máximo de cada guardería, seguido del cálculo del mínimo global. Esta aproximación posee una complejidad temporal de $O(N\times Q)$, resultando inviable para los límites del problema.
 
 5. **¿Qué estructura de datos elegiste?**
+   
    Se optó por una arquitectura basada COLAS DE PRIORIDAD(*Heaps*). Se emplea un Max-Heap independiente por cada guardería y un Min-Heap global para administrar a los representantes máximos, sincronizando la información mediante la técnica de eliminación perezosa (*Lazy Deletion*).
 
 6. **¿Qué estructura de la librería `cc232` se parece más?**
+   
    Deriva conceptualmente de la estructura `PQ_ComplHeap` correspondiente a la Semana 6, la cual ha sido adaptada metodológicamente para soportar la validación y purga diferida de su elemento tope.
 
 7. **¿Qué operación domina el tiempo?**
+   
    El tiempo de ejecución está dominado por las operaciones de inserción y el proceso de purga de registros obsoletos en los Heaps, presentando un costo asintótico de $O(\log N)$ por cada operación.
 
 8. **¿Qué invariante mantiene tu estructura?**
+   
    El invariante estructural garantiza que el elemento ubicado en la cima de cualquier Heap corresponda estrictamente a un registro vigente. Todo dato obsoleto que alcance la cima es purgado antes de procesar cualquier consulta.
 
 9. **¿Dónde se actualiza ese invariante en el código?**
+   
    Se restablece en los métodos de lectura, como `getMinGlobal()` o las funciones de limpieza interna. Se utilizan bucles `while` que ejecutan la operación `pop()` consecutivamente hasta que los datos de la cima coinciden de forma exacta con el registro central de ubicaciones del sistema.
 
 10. **¿Qué caso borde puede romper una solución superficial?**
+   
     El escenario donde una guardería transita a un estado completamente vacío. La lógica del sistema debe garantizar que el Min-Heap global no procese ni retenga representaciones de guarderías sin población activa.
 
 11. **¿Cómo manejas duplicados, empates o elementos obsoletos?**
+    
     Los duplicados físicos de un mismo infante (generados en el Heap por transferencias sucesivas) y los elementos obsoletos se gestionan conjuntamente mediante un arreglo de control de estado (`ubicacion_actual[id]`). Si la guardería registrada en el nodo del Heap difiere de este registro central, el duplicado se clasifica como inválido y se descarta mediante *Lazy Deletion*. 
+    
     Por otro lado, las colisiones lógicas (empates de fuerza entre diferentes infantes) se resuelven de forma natural y sin conflictos por las propiedades estructurales inherentes del Max-Heap.
 
 12. **¿Cuál es la complejidad temporal por operación?**
+    
     Presenta un costo de $O(\log N)$ en tiempo amortizado por cada evento de transferencia.
 
 13. **¿Cuál es la complejidad total?**
+    
     La complejidad asintótica total es de $O((N+Q)\log N)$, englobando la construcción inicial y la resolución secuencial de consultas.
 
 14. **¿Cuál es la complejidad espacial?**
+    
     La cota de memoria es $O(N + Q)$ en el peor de los escenarios, determinado por la acumulación de registros históricos sin purgar dentro de los arreglos subyacentes de los Heaps.
 
 15. **¿Qué parte del código sería más fácil de romper?**
+    
     La sincronización del estado. La omisión en la actualización del arreglo de control previo a la inserción en el Heap comprometería la técnica de *Lazy Deletion*, derivando en la emisión de máximos lógicamente inválidos.
 
 16. **¿Qué alternativa de estructura existe y qué perderías con ella?**
-    Emplear contenedores auto-balanceados como `std::multiset` (basados en Árboles Rojo-Negro). Si lo usaramos implicaría sacrificar la localidad de referencia en caché y la eficiencia operacional bruta inherente a los Heaps construidos sobre arreglos contiguos.
+    
+    Para el manejo interno de los miles de grupos locales, la alternativa obvia era usar `std::multiset` (basado en Árboles Rojo-Negro). Decidí descartarlo y usar `PQ_ComplHeap` adaptado porque con un multiset perderíamos la enorme localidad de referencia en caché y la eficiencia operacional bruta de los arreglos contiguos. 
+
+    Cabe aclarar que *sí* utilizo un único `std::multiset` de forma auxiliar para la estructura global (`maximos_globales`). Esto se debe a que un Heap estándar no permite buscar y borrar valores arbitrarios en $O(\log N)$ cuando el máximo de una guardería cambia. Usar el Heap para lo local y el Multiset para lo global me dio el mejor balance entre rendimiento y simplicidad.
 
 17. **¿Qué prueba propia escribiste?**
+    
     Se implementaron pruebas unitarias integradas mediante CTest en `test_smart_infants.cpp`. Estas incluyen pruebas de validación estructural, destacando escenarios de estrés para evaluar el vaciado de guarderías y la correcta estabilización matemática de los Heaps.
 
 18. **¿Qué cambiaste durante el bloque sin cortes?**
+    
     Se implementó un diagnóstico dentro de la función principal de transferencia. Esta modificación introduce un monitoreo de estado que emite una alerta por consola en el instante preciso en que una guardería queda completamente vacía (población igual a cero), validando así el dominio del código en vivo exigido para la sustentación.
 
 19. **¿Cómo sabes que el cambio no rompió la solución?**
+    
     Su validez estructural se garantiza de forma empírica mediante la ejecución de los 6 escenarios de pruebas automatizadas en CTest. La obtención de un 100% de éxito confirma la preservación del invariante y la ausencia de regresiones.
 
 20. **¿Qué demuestra que no es una solución de caja negra?**
+    
     Queda evidenciado mediante la implementación del algoritmo del *Lazy Deletion*. Una solución de caja negra dependería de abstracciones del lenguaje (como el método `.erase()` en contenedores estándar), mientras que esta solucion diseña y administra manualmente el ciclo de vida y la expiración asíncrona de los nodos para maximizar la optimización.

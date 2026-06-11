@@ -17,8 +17,8 @@
     5. Benchmark de rendimiento validando la optimización logarítmica frente a una solución ingenua en tiempo $O(N)$.
     6. Verificación explícita del invariante principal (Lazy Deletion para la limpieza de nodos basura).
   
-  Adicionalmente, se actualizó el archivo `CMakeLists.txt` para integrar el ecosistema CTest, y se documentaron los resultados en los registros de evidencia textual (`tests_pc3.txt`, `casos_borde.txt` y `ejecucion_pc3.txt`). 
-  Finalmente, se creó el archivo auxiliar `input.txt` para permitir la inyección rápida y automatizada del caso de prueba de AtCoder en la terminal.
+      Adicionalmente, se actualizó el archivo `CMakeLists.txt` para integrar el ecosistema CTest, y se documentaron los resultados en los registros de evidencia textual (`tests_pc3.txt`, `casos_borde.txt` y `ejecucion_pc3.txt`). 
+      Finalmente, se creó el archivo auxiliar `input.txt` para permitir la inyección rápida y automatizada del caso de prueba de AtCoder en la terminal.
 
   * **Día 5 (08/06/2026):** Redacción de la documentación técnica completa. Se elaboró el archivo `README.md` cumpliendo con la plantilla exigida por la rúbrica. Se documentaron las justificaciones de complejidad, diseño algorítmico y control de redundancias mediante Lazy Deletion en `respuestas_obligatorias.md`. 
   Finalmente, se desarrolló e implementó `benchmark_pc3.cpp` para validar el rendimiento empírico de $O(\log N)$ y registrar oficialmente el quinto día de trabajo en el historial del repositorio.
@@ -27,3 +27,5 @@
   Se optimizó el ecosistema de construcción en `CMakeLists.txt` unificando el main, tests, demo y benchmark (este último con bandera de optimización `-O3`). 
   En el apartado de documentación, se actualizaron las respuestas_obligatorias.md mejorando la explicación de las 3 preguntas específicas del problema AtCoder ABC170 E.
   Además, se concluyó la Actividad 6 (incluyendo la instrumentación del Treap, pruebas de invariantes y defensa escrita) y se aplicaron correcciones menores de formato visual y adición de autoevaluaciones en las Actividades 4 y 5.
+
+  * **Día 7 (10/06/2026):** Día dedicado a la limpieza y formato final del proyecto. Mejoré la legibilidad de los reportes (`tests_pc3.txt` y `casos_borde.txt`) utilizando divisores ASCII para que se vean ordenados en la consola. Además, le di una última revisión a `respuestas_obligatorias.md` para arreglar la indentación y dejar mucho más clara la pregunta 16, justificando por qué mezclé `PQ_ComplHeap` con `std::multiset`. El código y los documentos ya están congelados para empezar a grabar el video.

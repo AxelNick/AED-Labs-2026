@@ -1,52 +1,52 @@
 
-REPORTE DE CASOS BORDE Y SITUACIONES EXTREMAS : ATCODER ABC170 E - SMART INFANTS
+REPORTE DE CASOS BORDE Y SITUACIONES EXTREMAS : ATCODER ABC170 E
 
 Comando de ejecución:
-./build/test_smart_infants.exe
+$ ./build/test_smart_infants.exe
 
------ LÍMITES ESTRUCTURALES -----
+--------------------------------------------------------------------------------
+ [BORDE 1] - CASO MÍNIMO ABSOLUTO (N=1)
 
-[BORDE 1] - CASO MÍNIMO ABSOLUTO (N=1)
+ Objetivo           : Validar que el multiset y el heap no fallen al operar con 
+                      el tamaño mínimo permitido por AtCoder.
+ Entrada            : N=1 (Infante 1: 100 de fuerza en G1)
+ Operación          : Mover N1 a G2.
+ Validación Crítica : El sistema retira a G1 de las guarderías activas y crea 
+                      G2 sin arrojar errores de índice fuera de rango.
 
-Objetivo: Validar que el multiset y el heap no fallen al operar con el tamaño mínimo permitido por AtCoder.
+ Resultado Esperado : minGlobal = 100
+ Resultado Obtenido : 100
+ Salida Terminal    : [OK] Test 1: Caso minimo pasado
 
-Entrada: N=1 (Infante 1: 100 de fuerza en G1)
 
-Operación: Mover N1 a G2.
+--------------------------------------------------------------------------------
+ [BORDE 2] - COLAPSO DE GUARDERÍA (ESTRUCTURA VACÍA)
 
-Validación: El sistema retira a G1 de las guarderías activas y crea G2 sin arrojar errores de índice fuera de rango.
+ Objetivo           : Comprobar la resiliencia al vaciar por completo un Heap.
+ Estado Inicial     : G1={N1:50, N2:60}
+ Operaciones        : 1) Mover N2 a G2 -> G1={50}, G2={60}. minGlobal = 50
+                      2) Mover N1 a G2 -> G1={}, G2={50, 60}.
+ Validación Crítica : G1 se queda con 0 infantes. Al buscar su máximo, el 
+                      sistema detecta el vacío y retorna -1, retirando a G1 
+                      del Multiset global de máximos válidos.
 
-Resultado Esperado: minGlobal = 100
-Resultado Obtenido: 100
-Terminal : "[OK] Test 1: Caso minimo pasado"
+ Resultado Esperado : minGlobal = 60 (tras la Operación 2)
+ Resultado Obtenido : 60
+ Salida Terminal    : [OK] Test 2: Estructura vacia/frontera pasado
 
-[BORDE 2] - COLAPSO DE GUARDERÍA (ESTRUCTURA VACÍA)
 
-Objetivo: Comprobar la resiliencia al vaciar por completo un Heap
+--------------------------------------------------------------------------------
+ [BORDE 3] - MUY ALTA CONCENTRACIÓN (TODOS EN UNA GUARDERÍA)
 
-Estado Inicial: G1={N1:50, N2:60}
+ Objetivo           : Forzar la inserción sucesiva en un solo Heap.
+ Entrada            : 3 infantes distribuidos en {G1, G2, G3}.
+ Operaciones        : Mover N1 a G3, Mover N2 a G3.
+ Validación Crítica : G1 y G2 desaparecen del radar global, G3 acumula todo el 
+                      árbol de nodos {10, 20, 30}.
 
-Operación 1: Mover N2 a G2 -> G1={50}, G2={60}. minGlobal = 50
-Operación 2: Mover N1 a G2 -> G1={}, G2={50, 60}
+ Resultado Esperado : minGlobal = 30
+ Resultado Obtenido : 30
+ Salida Terminal    : [OK] Test 4: Caso extremo manual pasado
 
-Validación crítica: G1 se queda con 0 infantes. Al buscar su máximo, el sistema detecta el vacío y retorna -1, retirando a G1 del Multiset global de máximos válidos
-
-Resultado Esperado tras Op2: minGlobal = 60
-Resultado Obtenido: 60
-Terminal : "[OK] Test 2: Estructura vacia/frontera pasado"
-
-[BORDE 3] - MUY ALTA CONCENTRACIÓN (TODOS EN UNA GUARDERÍA)
-
-Objetivo: Forzar la inserción sucesiva en un solo Heap
-
-Entrada: 3 infantes distribuidos en {G1, G2, G3}
-
-Operaciones: Mover N1 a G3, Mover N2 a G3
-
-Validación: G1 y G2 desaparecen del radar global, G3 acumula todo el árbol de nodos {10, 20, 30}
-
-Resultado Esperado: minGlobal = 30
-Resultado Obtenido: 30
-Terminal : "[OK] Test 4: Caso extremo manual pasado"
-
-RESUMEN DE CTEST: 100% casos borde mitigados con éxito
+---------------------------------------------------------------------------------
+ RESUMEN DE CTEST   : 100% casos borde mitigados con éxito

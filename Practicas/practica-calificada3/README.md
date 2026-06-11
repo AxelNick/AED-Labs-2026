@@ -62,16 +62,14 @@ cmake --build build
 
 #### Pruebas
 1. **Caso mínimo garantizado:** Valida la estructura con 1 solo infante y 1 transferencia.
-2. **Resiliencia ante guarderías vacías:** Verifica que los grupos sin niños se eliminen lógicamente del Min-Heap global (no se toman en cuenta al buscar el mínimo).
-3. **Manejo de duplicados (Empates):** Evalúa la estabilidad matemática cuando varios niños tienen exactamente la misma fuerza en el mismo grupo.
-4. **Múltiples saltos rápidos:** Un mismo infante saltando velozmente entre varias guarderías distintas para generar múltiples "fantasmas" y forzar una purga profunda del Lazy Deletion.
-5. **Validación manual del caso oficial:** Ejecución del caso de prueba de muestra de AtCoder (Salida esperada: 6, 2, 6).
-6. **Verificación de invariante global:** Monitoreo del Min-Heap global para asegurar que, sin importar cuántos grupos queden vacíos, la cima siempre devuelva el representante válido.
-
+2. **Caso con estructura vacía / frontera:** Verifica que al vaciar una guardería, el sistema detecte la ausencia de infantes, retorne `-1` y la elimine lógicamente del mínimo global.
+3. **Manejo de duplicados o empates:** Evalúa la estabilidad matemática cuando varios niños tienen exactamente la misma fuerza en el mismo grupo.
+4. **Caso extremo pequeño verificable manualmente:** Simula 3 infantes uniéndose progresivamente en una sola guardería para comprobar el agrupamiento y descarte de los grupos anteriores.
+5. **Comparación contra solución ingenua:** Contrasta el resultado del algoritmo óptimo en $O(\log N)$ contra un cálculo de fuerza bruta mediante iteración de arreglos en $O(N)$ para asegurar precisión matemática.
+6. **Prueba específica del invariante (Lazy Deletion):** Valida que el Heap ignore correctamente a los "fantasmas" (niños que ya se mudaron y siguen en la cima) y reporte el máximo real sin corromper el estado global.
 
 #### Evidencia Git
 Comandos ejecutados para registrar el proceso:
-
 ```bash
 git status
 git log --date=short --pretty=format:"%ad - %h - %an - %s"
