@@ -93,6 +93,18 @@ public:
     int max_vieja_nuevo = getMaxReal(vieja_guarderia);
     int max_nueva_nuevo = getMaxReal(nueva_guarderia);
 
+    //reto : grupo vacio 
+    if(max_vieja_nuevo ==-1){
+        std::cout << "[TRAZA en VIVO] : LA guarderia "<<vieja_guarderia<<" ha quedado vacia tras mover al niño "<<std::endl;
+
+    }
+    //Nuevo maximo
+    if(max_nueva_nuevo > max_nueva_ant){
+
+      std::cout << "[TRAZA EN VIVO] : La guarderia "<<nueva_guarderia << "recibe u nuevo maximo de " << max_nueva_nuevo << std::endl;
+    }
+
+
     // 4. Registrar los nuevos máximos en el global
     if (max_vieja_nuevo != -1) {
       maximos_globales.insert(max_vieja_nuevo);
