@@ -82,13 +82,19 @@ He programado 6 aserciones críticas en `test_smart_infants.cpp`. A continuació
 * **Salida obtenida:** 100.
 * **Qué aspecto valida:** Estabilidad matemática ante colisiones de fuerza.
 
-##### 4. Comparación contra solución ingenua (Fuerza Bruta)
+##### 4. Caso extremo pequeño verificable manualmente
+* **Entrada usada:** 3 infantes uniéndose progresivamente a una sola guardería.
+* **Salida esperada:** El sistema descarta los grupos anteriores y actualiza el máximo en la nueva guardería paso a paso.
+* **Salida obtenida:** `Test Passed`.
+* **Qué aspecto valida:** Simulación progresiva manual para comprobar el agrupamiento correcto.
+
+##### 5. Comparación contra solución ingenua (Fuerza Bruta)
 * **Entrada usada:** Arreglos aleatorios pequeños iterados.
 * **Salida esperada:** Resultado idéntico entre cálculo ingenuo iterativo y estructura de Heaps.
 * **Salida obtenida:** `Test Passed`.
 * **Qué aspecto valida:** Exactitud matemática absoluta (cumple el Reto Transversal de comparar versiones).
 
-##### 5. Prueba específica del invariante (Lazy Deletion)
+##### 6. Prueba específica del invariante (Lazy Deletion)
 * **Entrada usada:** Infante fuerte (rate 50) y débil (rate 20) en Guardería 1. El infante fuerte es transferido a Guardería 2.
 * **Salida esperada:** El nuevo máximo de la Guardería 1 es 20 (el 50 obsoleto es ignorado).
 * **Salida obtenida:** 20.
@@ -112,6 +118,10 @@ Respondidas en detalle y documentadas en docs/respuestas_obligatorias.md.
 
 #### Bitácora obligatoria
 Registrada en docs/bitacora.md.
+
+#### Enlaces de la Sustentación
+- **Video de sustentación:** [https://drive.google.com/file/d/1mvt9otofLnJ5ByHUVTY6B-7ShvQMmCXZ/view?usp=sharing]
+- **Diapositivas (Canva):** [https://canva.link/6w5xp9tvcjwkgq1]
 
 #### Declaración de autoría
 Declaro que entiendo el código entregado, que puedo explicarlo, compilarlo, ejecutarlo y modificarlo sin ayuda externa durante la grabación. También declaro que el repositorio entregado corresponde al trabajo mostrado en el video y que no contiene builds, ejecutables ni archivos generados usados para aparentar funcionamiento.
