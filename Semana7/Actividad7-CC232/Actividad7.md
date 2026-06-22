@@ -204,8 +204,94 @@ AVL level-order: 30 20 40 10 25 50 22 27
 Valido AVL: si
 Tras borrar 20 y 40: 10 22 25 27 30 50 
 Valido AVL: si
-
 ```
+
+## Bloque 4 - Rotaciones AVL: casos LL, RR, LR y RL
+
+### Archivos revisados :
+* `Semana7/include/AVLTreeCompact.h`
+* `Semana7/demos/demo_avl_compact_rotations.cpp`
+* `Semana7/include/AVL.h`
+
+### Tabla de Rotaciones AVL
+Para observar los casos, se asume la inserción consecutiva en un árbol inicialmente vacío para generar el desbalance.
+
+| Caso | Secuencia insertada | Nodo desbalanceado (g) | Rotación aplicada | Inorder antes (lógico) | Inorder después | Altura final |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **LL** | 30, 20, 10 | 30 | Simple a la derecha (`rotateAt(10)`) | 10, 20, 30 | 10, 20, 30 | 1 |
+| **RR** | 10, 20, 30 | 10 | Simple a la izquierda (`rotateAt(30)`) | 10, 20, 30 | 10, 20, 30 | 1 |
+| **LR** | 30, 10, 20 | 30 | Doble: Izquierda-Derecha (`rotateAt(20)`) | 10, 20, 30 | 10, 20, 30 | 1 |
+| **RL** | 10, 30, 20 | 10 | Doble: Derecha-Izquierda (`rotateAt(20)`) | 10, 20, 30 | 10, 20, 30 | 1 |
+
+*Nota: "Inorder antes" se refiere al estado lógico momentáneo justo después de insertar el nodo y antes de que la función `rotateAt` reestructure los punteros.*
+
+### Dibujos pequeños de las rotaciones
+
+**Caso LL (Izquierda-Izquierda)**
+```text
+Antes:        Después (Rotación Derecha):
+    30             20
+   /              /  \
+  20    -->     10    30
+ /
+10
+```
+
+**Caso RR (Derecha-Derecha)**
+```text
+Antes:        Después (Rotación Izquierda):
+10                 20
+  \               /  \
+   20   -->     10    30
+     \
+      30
+```
+
+**Caso LR (Izquierda-Derecha)**
+```text
+Antes:        Intermedio (Izq en 10):    Después (Der en 30):
+    30                30                      20
+   /                 /                       /  \
+  10    -->         20          -->        10    30
+    \              /
+     20          10
+```
+
+**Caso RL (Derecha-Izquierda)**
+```text
+Antes:        Intermedio (Der en 30):    Después (Izq en 10):
+10                10                          20
+  \                 \                        /  \
+   30   -->          20         -->        10    30
+  /                   \
+ 20                    30
+```
+
+### Preguntas
+
+**1. ¿Qué diferencia hay entre una rotación simple y una rotación doble?**
+
+* **Rotación Simple**: Se realiza un único reajuste de punteros en una sola dirección (izquierda o derecha). Se utiliza cuando el camino de inserción o desbalance sigue una línea recta (todo a la izquierda o todo a la derecha).
+
+* **Rotación Doble**: Requiere dos reajustes de punteros en direcciones opuestas. Se utiliza cuando el camino del desbalance forma un "zig-zag" (hijo izquierdo y luego hijo derecho, o viceversa). Internamente, primero convierte el zig-zag en una línea recta y luego aplica la rotación simple. 
+
+**2. ¿Por qué LL y RR se corrigen con una sola rotación?**
+Porque el exceso de peso está concentrado en un solo lado de forma lineal. En el caso LL, el subárbol izquierdo está muy pesado hacia la izquierda; simplemente girando el nodo intermedio hacia arriba (a la derecha) se redistribuye el peso de manera uniforme, convirtiendo al nodo intermedio en la nueva raíz de ese subárbol.
+
+**3. ¿Por qué LR y RL requieren dos pasos?**
+Porque el peso está "atrapado" en el interior del subárbol. En un caso LR, el nodo desbalanceado izquierdo tiene un hijo derecho pesado. Si hiciéramos una rotación simple, ese peso interno no se movería al lado opuesto del desbalance. Se necesita un primer paso para "sacar" ese peso hacia el exterior (alinearlo en LL) y un segundo paso para elevarlo a la raíz del subárbol.
+
+**4. ¿Qué parte del árbol cambia y qué parte permanece igual?**
+
+* **Cambia**: La jerarquía local y las alturas de los 3 nodos involucrados directamente en el desbalance (el nodo desbalanceado, su hijo alto y su nieto alto). También cambian los enlaces entre estos 3 nodos y sus subárboles adyacentes inmediatos.
+
+* **Permanece igual**: Todos los subárboles que cuelgan de esos 3 nodos (los subárboles $T_0, T_1, T_2, T_3$ en el modelo de Deng). Estos subárboles se mueven "en bloque", manteniendo intacta su estructura interna y el resto del árbol por encima del nodo desbalanceado (si el balance se restauró sin afectar la altura total).
+
+**5. ¿Por qué el inorder debe ser el mismo antes y después de reestructurar? (Argumento de preservación del orden BST)**
+El recorrido inorder representa la secuencia lógica de menor a mayor en el árbol. La rotación es únicamente un cambio de la geometría y profundidad de los nodos, no un cambio en su valor o relación de orden.
+
+Por ejemplo, si la relación lógica es $10 < 20 < 30$, no importa si el 20 es hijo de 30 (como en el desbalance LL) o si el 30 es hijo de 20 (después de la rotación); el árbol sigue respetando que todo a la izquierda es menor y todo a la derecha es mayor. Por diseño, la reasignación de los subárboles respeta la propiedad de búsqueda, garantizando que el inorder permanezca inalterado.
+
 
 ## Bloque 5 - Red-Black Tree: balance por colores
 
