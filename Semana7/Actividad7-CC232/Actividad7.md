@@ -420,3 +420,59 @@ Valido RedBlack: si
 Tras borrar 18 y 11: 2 3 6 7 8 10 13 22 26 
 Valido RedBlack: si
 ```
+
+## Bloque 6 - Comparación: BST, Treap, AVL y Red-Black Tree
+
+### Archivos revisados:
+
+* `Semana6/include/Treap.h`
+* `Semana7/demos/demo_compare_avl_vs_redblack.cpp`
+* `Semana7/demos/demo_compare_with_semana5.cpp`
+* `Semana7/demos/demo_capitulo7_panorama.cpp`
+
+### Tabla comparativa
+
+| Estructura | Propiedad de orden | Propiedad adicional | Operación de reparación | Altura esperada o garantizada | Caso donde conviene usarla |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BST común** | Invariante BST (izq < padre < der). | Ninguna. | Ninguna. | Esperada $O(\log n)$ si es aleatorio; Peor caso $O(n)$. | Datos pre-aleatorizados, aprendizaje, algoritmos sin riesgo de orden previo. |
+| **Treap** | Invariante BST. | Invariante Heap (Max-Heap por prioridad aleatoria). | Rotaciones simples (Bubble-up / Trickle-down). | Esperada $O(\log n)$ con altísima probabilidad. | Necesidad de balance probabilístico, splits/merges rápidos, o programación competitiva. |
+| **AVL** | Invariante BST. | Factor de balance por altura real ($-1, 0, 1$). | Rotaciones simples y dobles (`connect34`). | Garantizada estricta $O(\log n)$ (aprox. $1.44 \log n$). | Sistemas de lectura intensiva (muchas búsquedas) y pocas modificaciones. |
+| **Red-Black Tree**| Invariante BST. | Balance por color (altura negra constante, sin rojos consecutivos). | Recoloreo y rotaciones (simples/dobles). | Garantizada relajada $O(\log n)$ (aprox. $2 \log n$). | Sistemas de propósito general con frecuentes inserciones y eliminaciones (ej. `std::set`). |
+
+### Preguntas
+
+**1. ¿Qué tienen en común BST, Treap, AVL y Red-Black Tree?**
+
+Todos comparten la misma estructura base y el invariante fundamental de búsqueda binaria: los elementos a la izquierda son menores, y a la derecha son mayores. Esto significa que en las cuatro estructuras, un recorrido `inorder` siempre producirá la misma secuencia ordenada de claves. Además, todos delegan sus búsquedas en la misma lógica topológica.
+
+**2. ¿Qué diferencia hay entre prioridad en Treap, altura en AVL y color en Red-Black Tree?**
+
+* **Prioridad (Treap):** Es un valor numérico estocástico (generado al azar, `rng_()`) asignado independientemente del valor del nodo. No mide nada físico del árbol.
+* **Altura (AVL):** Es una métrica física exacta que representa la distancia (conteo de aristas) desde un nodo hasta su hoja más profunda.
+* **Color (Red-Black):** Es un atributo binario (regla lógica) que actúa como un proxy matemático para controlar la estructura sin tener que calcular distancias físicas en cada nodo.
+
+**3. ¿Por qué Treap depende de prioridades?**
+
+Porque utiliza la aleatoriedad de las prioridades para "simular" que los elementos fueron insertados en un orden aleatorio, sin importar en qué orden llegaron realmente. Como estadísticamente un BST creado con inserciones aleatorias tiene una altura $O(\log n)$, el Treap evita el peor caso determinista (degeneración) forzando esa forma aleatoria mediante el invariante de Heap.
+
+**4. ¿Por qué AVL suele ser más estricto en altura?**
+
+Porque su invariante exige matemáticamente que la diferencia de alturas entre los hijos de *cualquier* nodo no exceda de 1. Esto aplana el árbol al máximo límite estructural posible en un árbol binario bidimensional, resultando en el árbol más corto y con las búsquedas más rápidas entre todas estas estructuras.
+
+**5. ¿Por qué Red-Black Tree puede ser preferible cuando hay muchas inserciones y eliminaciones?**
+
+Su invariante de colores permite que el camino más largo hacia una hoja sea hasta el doble de grande que el camino más corto. Este margen de tolerancia (balance menos estricto que el AVL) hace que muchísimas descompensaciones se resuelvan simplemente cambiando un atributo de color (operación de bajo costo, sin cambiar punteros), disminuyendo drásticamente la cantidad de rotaciones necesarias durante escrituras masivas.
+
+**6. ¿Qué estructura elegirías para defender búsqueda ordenada con balance fuerte?**
+
+Si el sistema me pide defender lo anterior y los datos se modifican rara vez (lectura crítica), elegiría un **AVL**. Su compresión máxima de altura garantiza el mejor tiempo de búsqueda en el peor caso.
+
+**7. ¿Qué estructura elegirías para explicar balance probabilístico?**
+
+* Si el objetivo es explicar lo anterior elegiria el **Treap**. Es la estructura ideal para demostrar cómo la conjunción de dos paradigmas simples (BST + Heap) más un generador de números pseudoaleatorios genera un auto-balanceo elegante sin las complejas reglas deterministas de los otros árboles.
+
+### Conexión explícita con Semana 5 y Semana 6
+
+1. **Semana 5 (BST):** Definió cómo funcionan los nodos, el ordenamiento (`inorder`) y la regla de búsqueda, dejando vulnerable el árbol ante datos ordenados.
+
+2. **Semana 6 (Treap):** Introdujo la idea de **añadir un invariante extra** (propiedad de Heap con prioridades aleatorias) y usar **rotaciones** (`rotateLeft`, `rotateRight`) para mantenerlo, solucionando la degeneración de la Semana 5 de forma estadística.
