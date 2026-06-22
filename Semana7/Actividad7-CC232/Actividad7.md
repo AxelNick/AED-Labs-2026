@@ -60,6 +60,7 @@ Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Person
 ### Preguntas
 
 #### 1. ¿Qué targets de demostración aparecen para Semana 7?
+
 * `sem7_demo_avl_deng_core`
 * `sem7_demo_avl_compact_rotations`
 * `sem7_demo_bst_deng_vs_avl`
@@ -70,26 +71,32 @@ Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Person
 * `sem7_demo_capitulo7_panorama`
 
 #### 2. ¿Qué pruebas públicas e internas aparecen?
+
 * **Públicas:** `sem7_test_public` (etiquetado en ctest como `semana7_public`)
 * **Internas:** `sem7_test_internal` (etiquetado en ctest como `semana7_internal`)
 
 #### 3. ¿Qué archivos incluye Capitulo7.h?
+
 Incluye la base de nodos y árboles (`Entry.h`, `BinNode.h`, `BinTree.h`, `BinaryTree.h`, `BinarySearchTree.h`, `BST.h`) y las estructuras balanceadas (`AVL.h`, `RedBlackTree.h`, `AVLTreeCompact.h`, `RedBlackTreeLLRB.h`).
 
 #### 4. ¿Qué relación conceptual hay entre Semana 5, Semana 6 y Semana 7?
+
 Es una relación progresiva:
 * **Semana 5:** Base de árboles binarios y de búsqueda (BST).
 * **Semana 6:** Añade prioridades (Heaps) e introduce rotaciones con Treaps.
 * **Semana 7:** Aplica las rotaciones vistas en la S6 al BST de la S5 para crear árboles que se autobalancean (AVL por altura, Red-Black por color) y evitar la degeneración lineal.
 
 #### 5. ¿Por qué no es correcto decir que una carpeta "hereda" de otra carpeta?
+
 Porque la herencia es un concepto estricto de Programación Orientada a Objetos que se aplica a clases, no a la estructura de directorios del sistema operativo. Una carpeta "continúa" o "reutiliza" código de otra, pero no hereda.
 
 #### 6. ¿Qué clases sí usan herencia dentro del código?
+
 * El AVL hereda del BST: `AVL<T, Compare> : public BST<T, Compare>`
 * El Red-Black Tree hereda del BST genérico: `RedBlackTree<Node, T> : public BinarySearchTree<Node, T>`
 
 #### 7. ¿Qué evidencia inicial obtuviste al ejecutar las pruebas sin modificar nada?
+
 Que la implementación base entregada para los árboles AVL y Red-Black es correcta. El `ctest` reporta un 100% de éxito en `semana7_public` y `semana7_internal`, lo que indica que el código ya cumple con los invariantes antes de empezar a experimentar.
 
 ## Bloque 2 - BST como punto de partida
@@ -101,15 +108,19 @@ Que la implementación base entregada para los árboles AVL y Red-Black es corre
 * `Semana7/demos/demo_bst_deng_vs_avl.cpp`
 
 **1. Define formalmente la propiedad BST.**
+
 Un Árbol Binario de Búsqueda (BST) cumple con un invariante fundamental: para cualquier nodo \(N\), todos los valores en su subárbol izquierdo son estrictamente menores (o iguales, según la implementación) que el valor de \(N\), y todos los valores en su subárbol derecho son estrictamente mayores que el valor de \(N\).
 
 **2. Explica por qué el recorrido inorder de un BST produce una secuencia ordenada.**
+
 El recorrido `inorder` visita los nodos en el orden: Subárbol Izquierdo \(\rightarrow\) Nodo Actual \(\rightarrow\) Subárbol Derecho. Gracias a la propiedad BST, esto garantiza que siempre se visite primero a todos los elementos menores, luego al elemento intermedio, y finalmente a los mayores. Al aplicarse de forma recursiva, el resultado es una lectura secuencial de menor a mayor.
 
 **3. Explica por qué insertar claves ordenadas puede producir un BST degenerado.**
+
 Si se insertan datos que ya están ordenados (de forma ascendente o descendente), cada nuevo nodo será siempre mayor (o siempre menor) que el anterior. Esto provoca que todos los nodos se inserten como hijos derechos (o izquierdos) de forma consecutiva, dejando el otro lado del árbol completamente vacío. La estructura deja de ser un árbol bidimensional y se convierte esencialmente en una lista enlazada.
 
 **4. Construye manualmente el BST resultante de insertar: 10, 20, 30, 40, 50, 60, 70.**
+
 Al insertar la secuencia ordenada, el resultado es una degeneración lineal hacia la derecha:
 
 ```text
@@ -129,18 +140,23 @@ Al insertar la secuencia ordenada, el resultado es una degeneración lineal haci
 ```
 
 **5. Indica la altura del árbol anterior si no hay balanceo.**
+
 Asumiendo que la raíz (10) se encuentra en el nivel 0, la altura de este árbol es de **6** (tiene 6 aristas desde la raíz hasta la hoja más profunda).
 
 **6. Explica por qué una búsqueda en ese árbol puede costar $O(n)$ (Explicación del costo).**
+
 En un BST, el costo de las operaciones de búsqueda depende directamente de la altura del árbol. Como en este caso el árbol degeneró en una estructura lineal (su altura es igual a $n-1$), buscar un elemento que está al final (como el 70) o uno que no existe requerirá recorrer secuencialmente todos los $n$ nodos. Por lo tanto, el costo de búsqueda, en el peor de los casos, deja de ser logarítmico y pasa a ser lineal: $O(n)$.
 
 **7. Explica qué problema intenta resolver AVL.**
+
 El árbol AVL resuelve la degeneración lineal imponiendo un invariante de balance por altura. Garantiza que la diferencia de alturas entre el subárbol izquierdo y derecho de cualquier nodo sea como máximo 1. Para mantener esta evidencia, utiliza rotaciones tras cada inserción o eliminación, asegurando de forma estricta que la altura del árbol se mantenga en $O(\log n)$ y las búsquedas sean eficientes.
 
 **8. Explica qué problema intenta resolver Red-Black Tree.**
+
 Al igual que el AVL, busca evitar la degeneración lineal y garantizar búsquedas en $O(\log n)$, pero utilizando un invariante de balance por colores (nodos rojos o negros) y una serie de reglas matemáticas sobre los caminos hacia las hojas nulas. Su balanceo es un poco menos estricto que el AVL (el camino más largo no supera el doble del más corto), lo que a menudo resulta en menos rotaciones al insertar o eliminar, favoreciendo escenarios con muchas modificaciones.
 
 **9. Relación con la Semana 5.**
+
 La Semana 7 es una extensión directa de la Semana 5. El código de la Semana 5 (`BinarySearchTree.h`) establece la base funcional del BST (búsqueda, inserción, invariante de orden). La Semana 7 reutiliza esa misma interfaz y concepto central, pero añade clases derivadas (AVL, RedBlackTree) que incorporan las rotaciones y los invariantes estructurales que estaban ausentes en la Semana 5, demostrando cómo evolucionar un árbol simple hacia una estructura capaz de auto-balancearse.
 
 ## Bloque 3 - AVL: balance por altura
@@ -152,39 +168,51 @@ La Semana 7 es una extensión directa de la Semana 5. El código de la Semana 5 
 * `Semana7/demos/demo_avl_deng_core.cpp`
 
 **1. ¿Qué significa que un nodo esté balanceado en un AVL?**
+
 Significa que la diferencia de altura entre su subárbol izquierdo y su subárbol derecho es, como máximo, de 1. Formalmente, en la implementación se define como `-2 < balanceFactor(x) && balanceFactor(x) < 2`.
 
 **2. ¿Cómo se calcula el factor de balance?**
+
 Se calcula restando la altura del subárbol derecho a la del izquierdo: `stature(x->lc) - stature(x->rc)`. La altura de un nodo nulo (`nullptr`) se considera convencionalmente como -1.
 
 **3. ¿Qué información de altura debe mantenerse después de insertar o eliminar?**
+
 Cada nodo (representado por `BinNode`) contiene un atributo `height`. Tras una modificación, es obligatorio actualizar este valor en todos los ancestros afectados desde el punto de cambio hacia la raíz, utilizando la fórmula: $1 + \max(\text{stature}(lc), \text{stature}(rc))$.
 
 **4. ¿Qué representa `_hot` dentro de la implementación estilo Deng?**
+
 La variable `_hot` actúa como un puntero de rastro durante las búsquedas. Almacena la referencia al *padre* del nodo que está siendo evaluado. En una inserción, `_hot` es el nodo padre al cual se enlazará el nuevo elemento. En una eliminación, indica desde dónde se debe empezar a verificar el balance hacia arriba.
 
 **5. ¿Por qué AVL puede heredar de `BST<T, Compare>`?**
+
 Porque un árbol AVL *es* estructuralmente y lógicamente un BST. Hereda toda la lógica de búsqueda, la estructura de nodos y los recorridos. AVL simplemente especializa (hace `override`) de los métodos `insert` y `remove` para inyectar su lógica de verificación de balance y rotaciones justo después de aplicar las operaciones estándar del BST.
 
 **6. ¿Qué operación restaura localmente la forma del árbol?**
-El balanceo se restaura mediante rotaciones locales. En la estructura de Deng, esto se abstrae en el método unificado `rotateAt(v)`, que evalúa el tipo de desbalance y utiliza el método `connect34` para reestructurar 3 nodos y 4 subárboles de un solo golpe.
+
+El balanceo se restaura mediante rotaciones locales. En la estructura de Deng, esto se abstrae en el método unificado `rotateAt(v)`, que evalúa el tipo de desbalance y reestructura 3 nodos y 4 subárboles de un solo golpe.
 
 **7. ¿Por qué una rotación no destruye la propiedad BST?**
+
 Porque la reestructuración geométrica (ya sea rotación simple o doble) respeta rigurosamente el orden de las claves. Al realizar `connect34(a, b, c, T0, T1, T2, T3)`, el código asegura explícitamente que se mantenga el orden secuencial $T_0 < a < T_1 < b < T_2 < c < T_3$, preservando así la propiedad subyacente de búsqueda.
 
 **8. Después de insertar, ¿por qué suele bastar reparar el primer ancestro desbalanceado?**
+
 Cuando se inserta un nodo y el árbol se desbalancea, aplicar una rotación en el primer nodo crítico (el ancestro desbalanceado más profundo) hace que la altura total de ese subárbol en particular vuelva a ser la misma que tenía *antes* de la inserción. Como la altura global del subárbol reparado no cambia, los ancestros superiores no perciben el impacto y el balanceo termina prematuramente (`break;` en `AVL::insert`).
 
 **9. Después de eliminar, ¿por qué puede ser necesario seguir revisando hacia la raíz?**
+
 Al eliminar un nodo, una rotación reparadora puede disminuir la altura total del subárbol. Esta contracción puede desencadenar un nuevo desbalance en el nodo padre, lo que obliga al algoritmo a propagar la revisión y ejecutar posibles rotaciones en cascada hasta llegar a la raíz.
 
 ### Explicación de los invariantes AVL
+
 El árbol AVL mantiene dos invariantes inquebrantables simultáneamente:
 1. **Invariante de Orden (BST):** El hijo izquierdo es estrictamente menor al padre y el derecho es mayor.
 2. **Invariante de Estructura (AVL):** Para todo nodo $x$ en el árbol, su factor de balance $h(lc) - h(rc)$ pertenece obligatoriamente al conjunto $\{-1, 0, 1\}$.
 
 ### Trazado de inserción con al menos una rotación
+
 Asumamos la inserción consecutiva de `30, 20, 10`:
+
 1. **Insertar 30:** Se convierte en la raíz. Altura 0.
 2. **Insertar 20:** Es menor que 30, va a la izquierda. Raíz (30) pasa a altura 1, balance $1 - (-1) = 2$ (Wait, el balance es 1, ya que el hijo derecho es -1. Altura de 20 es 0). Todo está balanceado.
 3. **Insertar 10:** Es menor que 20, va a la izquierda de 20. 
@@ -214,6 +242,7 @@ Valido AVL: si
 * `Semana7/include/AVL.h`
 
 ### Tabla de Rotaciones AVL
+
 Para observar los casos, se asume la inserción consecutiva en un árbol inicialmente vacío para generar el desbalance.
 
 | Caso | Secuencia insertada | Nodo desbalanceado (g) | Rotación aplicada | Inorder antes (lógico) | Inorder después | Altura final |
@@ -276,9 +305,11 @@ Antes:        Intermedio (Der en 30):    Después (Izq en 10):
 * **Rotación Doble**: Requiere dos reajustes de punteros en direcciones opuestas. Se utiliza cuando el camino del desbalance forma un "zig-zag" (hijo izquierdo y luego hijo derecho, o viceversa). Internamente, primero convierte el zig-zag en una línea recta y luego aplica la rotación simple. 
 
 **2. ¿Por qué LL y RR se corrigen con una sola rotación?**
+
 Porque el exceso de peso está concentrado en un solo lado de forma lineal. En el caso LL, el subárbol izquierdo está muy pesado hacia la izquierda; simplemente girando el nodo intermedio hacia arriba (a la derecha) se redistribuye el peso de manera uniforme, convirtiendo al nodo intermedio en la nueva raíz de ese subárbol.
 
 **3. ¿Por qué LR y RL requieren dos pasos?**
+
 Porque el peso está "atrapado" en el interior del subárbol. En un caso LR, el nodo desbalanceado izquierdo tiene un hijo derecho pesado. Si hiciéramos una rotación simple, ese peso interno no se movería al lado opuesto del desbalance. Se necesita un primer paso para "sacar" ese peso hacia el exterior (alinearlo en LL) y un segundo paso para elevarlo a la raíz del subárbol.
 
 **4. ¿Qué parte del árbol cambia y qué parte permanece igual?**
@@ -288,6 +319,7 @@ Porque el peso está "atrapado" en el interior del subárbol. En un caso LR, el 
 * **Permanece igual**: Todos los subárboles que cuelgan de esos 3 nodos (los subárboles $T_0, T_1, T_2, T_3$ en el modelo de Deng). Estos subárboles se mueven "en bloque", manteniendo intacta su estructura interna y el resto del árbol por encima del nodo desbalanceado (si el balance se restauró sin afectar la altura total).
 
 **5. ¿Por qué el inorder debe ser el mismo antes y después de reestructurar? (Argumento de preservación del orden BST)**
+
 El recorrido inorder representa la secuencia lógica de menor a mayor en el árbol. La rotación es únicamente un cambio de la geometría y profundidad de los nodos, no un cambio en su valor o relación de orden.
 
 Por ejemplo, si la relación lógica es $10 < 20 < 30$, no importa si el 20 es hijo de 30 (como en el desbalance LL) o si el 30 es hijo de 20 (después de la rotación); el árbol sigue respetando que todo a la izquierda es menor y todo a la derecha es mayor. Por diseño, la reasignación de los subárboles respeta la propiedad de búsqueda, garantizando que el inorder permanezca inalterado.
@@ -302,10 +334,13 @@ Por ejemplo, si la relación lógica es $10 < 20 < 30$, no importa si el 20 es h
 * `Semana7/demos/demo_redblack_morin.cpp`
 
 **1. ¿Qué propiedad BST mantiene Red-Black Tree?**
+
 Al heredar de `BinarySearchTree`, mantiene la propiedad de orden clásica: todos los elementos en el subárbol izquierdo son menores al nodo actual, y los del subárbol derecho son mayores (o viceversa según el comparador). Esto garantiza que el recorrido `inorder` devuelva los elementos ordenados.
 
 **2. ¿Qué propiedades de color debe cumplir un Red-Black Tree?**
+
 Según la validación de su método `verify()`, debe cumplir las siguientes reglas:
+
 * Todo nodo es rojo (0) o negro (1).
 * La raíz siempre es negra.
 * Las hojas nulas / nodos centinela (`nil`) son negros.
@@ -313,10 +348,75 @@ Según la validación de su método `verify()`, debe cumplir las siguientes regl
 * Todos los caminos desde un nodo hasta sus hojas nulas contienen exactamente la misma cantidad de nodos negros.
 
 **3. ¿Por qué la raíz debe terminar negra?**
+
 Es una regla ancla para garantizar los límites matemáticos de la altura y simplificar las rotaciones. Al forzar que la raíz sea negra (como se ve en `addFixup` con `if (u == r) u->colour = black;`), se evita arrastrar una cascada de violaciones de color hacia arriba y se asegura que el conteo de la "altura negra" sea consistente.
 
 **4. ¿Qué significa que no pueda haber dos nodos rojos consecutivos?**
+
 Significa que un padre rojo no puede tener un hijo rojo (`u->left->colour == black && u->right->colour == black`). Este es el núcleo del balanceo: al intercalar obligatoriamente nodos negros, se impide que una rama crezca de forma degenerada (como una lista). Esto garantiza que el camino más largo del árbol nunca sea más del doble que el camino más corto.
 
 **5. ¿Qué representa la altura negra?**
+
 Representa la cantidad exacta de nodos negros que existen en el trayecto desde un nodo dado hasta cualquiera de sus descendientes nulos (`nil`). El código suma recursivamente los nodos negros y verifica que las ramas izquierda y derecha coincidan (`assert(dl == dr)`), confirmando así que el árbol está estructuralmente balanceado.
+
+**6. ¿Por qué Red-Black Tree permite un balance menos estricto que AVL?**
+
+Mientras AVL impone que la diferencia de alturas reales no exceda 1, Red-Black solo exige que la "altura" sea igual en todos los caminos. Como permite insertar nodos rojos entre los negros, el camino más largo (alternando rojo-negro) puede tener el doble de nodos físicos que el camino más corto (solo nodos negros). Este balance menos estricto reduce la cantidad de reestructuraciones y rotaciones profundas necesarias durante ráfagas de inserciones o eliminaciones.
+
+**7. ¿Qué correcciones pueden aparecer después de insertar?**
+
+Los nuevos nodos se insertan siempre como *rojos*. La principal violación que puede ocurrir es el choque de dos rojos consecutivos (padre rojo e hijo rojo recién insertado). Para corregirlo, el método `addFixup(u)` aplica una de tres soluciones iterativas:
+* **Recoloreo:** Cambiar el padre y al tío a negro, y al abuelo a rojo (propagando el problema hacia arriba).
+* **Rotación simple + Recoloreo:** Cuando el nodo y el padre están alineados en la misma dirección (caso análogo a LL o RR en AVL), se rota al abuelo y se invierten los colores del padre y el abuelo.
+* **Rotación doble + Recoloreo:** Cuando forman un zig-zag (análogo a LR o RL), se rota primero al padre para alinear y luego al abuelo, cambiando colores.
+
+**8. ¿Qué correcciones pueden aparecer después de eliminar?**
+
+La eliminación es compleja solo cuando se remueve un nodo *negro*, ya que esto reduce la altura negra de esa rama, violando el invariante. El algoritmo asigna un "doble negro" ficticio al nodo de reemplazo para mantener la matemática temporalmente, y el método `removeFixup(u)` intenta "descargar" ese peso extra:
+
+* Moviendo el extra negro hacia el hermano mediante rotaciones y recoloreos.
+* Transfiriendo el extra negro al padre y evaluando recursivamente hacia arriba.
+* Absolviendo el extra negro si llega a un nodo rojo o a la raíz.
+
+**9. ¿Qué papel cumplen las rotaciones en Red-Black Tree?**
+
+Las rotaciones ajustan el árbol para resolver desbalances de color que no pueden solucionarse simplemente pintando nodos. Su objetivo es redistribuir la cantidad de nodos de una rama hacia otra para permitir que el árbol cumpla la regla de los "rojos no consecutivos" y mantenga estable la altura negra.
+
+**10. ¿Qué papel cumple el cambio de colores?**
+
+El recoloreo (como en `pushBlack`, `pullBlack`, `flipLeft`, `flipRight`) es la **primera línea de defensa**. Sirve para resolver conflictos locales sin necesidad de modificar los punteros del árbol, lo cual es computacionalmente más barato que rotar. Permite propagar los excesos de peso o violaciones estructurales hacia la raíz, donde a menudo pueden absorberse de forma segura sin alterar la estructura general.
+
+### Lista de invariantes Red-Black
+
+1. Todos los nodos son de color rojo o negro.
+2. La raíz siempre es de color negro.
+3. Todas las hojas (los punteros `nil` o `nullptr`) se consideran nodos negros.
+4. Si un nodo es de color rojo, entonces sus dos hijos son obligatoriamente negros (no hay dos rojos adyacentes en ningún camino descendente).
+5. Todo camino simple desde cualquier nodo dado hasta cualquiera de sus hojas descendientes contiene exactamente el mismo número de nodos negros.
+
+### Explicación de una inserción que requiera recoloreo
+
+Supongamos un árbol que ya tiene un Abuelo (Negro) con dos hijos: un Padre (Rojo) y un Tío (Rojo).
+Si se inserta un nuevo nodo $N$ como hijo del Padre:
+
+1. $N$ entra al árbol coloreado de **Rojo**.
+2. **Violación:** Padre e Hijo ($N$) son rojos.
+3. El algoritmo revisa al Tío. Como el Tío es **Rojo**, no se necesita rotar. Se aplica un **Recoloreo**.
+4. El Padre pasa a ser **Negro**.
+5. El Tío pasa a ser **Negro**.
+6. El Abuelo pasa a ser **Rojo** (para mantener constante la altura negra de la rama).
+7. Ahora el problema se ha trasladado al Abuelo. Si el padre del Abuelo también es rojo, el proceso de resolución continúa recursivamente hacia arriba. Si el Abuelo resulta ser la raíz, se fuerza a Negro en el siguiente paso, incrementando la altura negra total de todo el árbol.
+
+### Evidencia de salida de `demo_redblack_morin.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ g++ -std=c++17 -I Semana7/include Semana7/demos/demo_redblack_morin.cpp -o demo_rb
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./demo_rb
+RB inorder: 2 3 6 7 8 10 11 13 18 22 26 
+Valido RedBlack: si
+Tras borrar 18 y 11: 2 3 6 7 8 10 13 22 26 
+Valido RedBlack: si
+```
