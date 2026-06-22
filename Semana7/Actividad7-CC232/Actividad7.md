@@ -143,6 +143,69 @@ Al igual que el AVL, busca evitar la degeneración lineal y garantizar búsqueda
 **9. Relación con la Semana 5.**
 La Semana 7 es una extensión directa de la Semana 5. El código de la Semana 5 (`BinarySearchTree.h`) establece la base funcional del BST (búsqueda, inserción, invariante de orden). La Semana 7 reutiliza esa misma interfaz y concepto central, pero añade clases derivadas (AVL, RedBlackTree) que incorporan las rotaciones y los invariantes estructurales que estaban ausentes en la Semana 5, demostrando cómo evolucionar un árbol simple hacia una estructura capaz de auto-balancearse.
 
+## Bloque 3 - AVL: balance por altura
+
+### Archivos revisados :
+* `Semana7/include/AVL.h`
+* `Semana7/include/BST.h`
+* `Semana7/include/BinNode.h`
+* `Semana7/demos/demo_avl_deng_core.cpp`
+
+**1. ¿Qué significa que un nodo esté balanceado en un AVL?**
+Significa que la diferencia de altura entre su subárbol izquierdo y su subárbol derecho es, como máximo, de 1. Formalmente, en la implementación se define como `-2 < balanceFactor(x) && balanceFactor(x) < 2`.
+
+**2. ¿Cómo se calcula el factor de balance?**
+Se calcula restando la altura del subárbol derecho a la del izquierdo: `stature(x->lc) - stature(x->rc)`. La altura de un nodo nulo (`nullptr`) se considera convencionalmente como -1.
+
+**3. ¿Qué información de altura debe mantenerse después de insertar o eliminar?**
+Cada nodo (representado por `BinNode`) contiene un atributo `height`. Tras una modificación, es obligatorio actualizar este valor en todos los ancestros afectados desde el punto de cambio hacia la raíz, utilizando la fórmula: $1 + \max(\text{stature}(lc), \text{stature}(rc))$.
+
+**4. ¿Qué representa `_hot` dentro de la implementación estilo Deng?**
+La variable `_hot` actúa como un puntero de rastro durante las búsquedas. Almacena la referencia al *padre* del nodo que está siendo evaluado. En una inserción, `_hot` es el nodo padre al cual se enlazará el nuevo elemento. En una eliminación, indica desde dónde se debe empezar a verificar el balance hacia arriba.
+
+**5. ¿Por qué AVL puede heredar de `BST<T, Compare>`?**
+Porque un árbol AVL *es* estructuralmente y lógicamente un BST. Hereda toda la lógica de búsqueda, la estructura de nodos y los recorridos. AVL simplemente especializa (hace `override`) de los métodos `insert` y `remove` para inyectar su lógica de verificación de balance y rotaciones justo después de aplicar las operaciones estándar del BST.
+
+**6. ¿Qué operación restaura localmente la forma del árbol?**
+El balanceo se restaura mediante rotaciones locales. En la estructura de Deng, esto se abstrae en el método unificado `rotateAt(v)`, que evalúa el tipo de desbalance y utiliza el método `connect34` para reestructurar 3 nodos y 4 subárboles de un solo golpe.
+
+**7. ¿Por qué una rotación no destruye la propiedad BST?**
+Porque la reestructuración geométrica (ya sea rotación simple o doble) respeta rigurosamente el orden de las claves. Al realizar `connect34(a, b, c, T0, T1, T2, T3)`, el código asegura explícitamente que se mantenga el orden secuencial $T_0 < a < T_1 < b < T_2 < c < T_3$, preservando así la propiedad subyacente de búsqueda.
+
+**8. Después de insertar, ¿por qué suele bastar reparar el primer ancestro desbalanceado?**
+Cuando se inserta un nodo y el árbol se desbalancea, aplicar una rotación en el primer nodo crítico (el ancestro desbalanceado más profundo) hace que la altura total de ese subárbol en particular vuelva a ser la misma que tenía *antes* de la inserción. Como la altura global del subárbol reparado no cambia, los ancestros superiores no perciben el impacto y el balanceo termina prematuramente (`break;` en `AVL::insert`).
+
+**9. Después de eliminar, ¿por qué puede ser necesario seguir revisando hacia la raíz?**
+Al eliminar un nodo, una rotación reparadora puede disminuir la altura total del subárbol. Esta contracción puede desencadenar un nuevo desbalance en el nodo padre, lo que obliga al algoritmo a propagar la revisión y ejecutar posibles rotaciones en cascada hasta llegar a la raíz.
+
+### Explicación de los invariantes AVL
+El árbol AVL mantiene dos invariantes inquebrantables simultáneamente:
+1. **Invariante de Orden (BST):** El hijo izquierdo es estrictamente menor al padre y el derecho es mayor.
+2. **Invariante de Estructura (AVL):** Para todo nodo $x$ en el árbol, su factor de balance $h(lc) - h(rc)$ pertenece obligatoriamente al conjunto $\{-1, 0, 1\}$.
+
+### Trazado de inserción con al menos una rotación
+Asumamos la inserción consecutiva de `30, 20, 10`:
+1. **Insertar 30:** Se convierte en la raíz. Altura 0.
+2. **Insertar 20:** Es menor que 30, va a la izquierda. Raíz (30) pasa a altura 1, balance $1 - (-1) = 2$ (Wait, el balance es 1, ya que el hijo derecho es -1. Altura de 20 es 0). Todo está balanceado.
+3. **Insertar 10:** Es menor que 20, va a la izquierda de 20. 
+   * Nodo 20: altura 1, balance 1.
+   * Nodo 30 (raíz): altura 2, su hijo izquierdo (20) tiene altura 1, su derecho (`nullptr`) -1. Su balance es $1 - (-1) = 2$. **¡Desbalance detectado en 30!**
+4. **Rotación:** Estamos ante un caso *Izquierda-Izquierda* (LL). Se llama a `rotateAt(10)`. El nodo `20` sube como nueva raíz del subárbol, `10` se queda como su hijo izquierdo y `30` baja a ser el hijo derecho. Las alturas de `10` y `30` quedan en 0, y la de `20` en 1. Balance restaurado.
+
+### Evidencia de salida de `demo_avl_deng_core.cpp`
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ g++ -std=c++17 -I Semana7/include Semana7/demos/demo_avl_deng_core.cpp -o demo_avl
+
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./demo_avl
+AVL inorder: 10 20 22 25 27 30 40 50 
+AVL level-order: 30 20 40 10 25 50 22 27 
+Valido AVL: si
+Tras borrar 20 y 40: 10 22 25 27 30 50 
+Valido AVL: si
+
+```
 
 ## Bloque 5 - Red-Black Tree: balance por colores
 
