@@ -92,6 +92,57 @@ Porque la herencia es un concepto estricto de Programación Orientada a Objetos 
 #### 7. ¿Qué evidencia inicial obtuviste al ejecutar las pruebas sin modificar nada?
 Que la implementación base entregada para los árboles AVL y Red-Black es correcta. El `ctest` reporta un 100% de éxito en `semana7_public` y `semana7_internal`, lo que indica que el código ya cumple con los invariantes antes de empezar a experimentar.
 
+## Bloque 2 - BST como punto de partida
+
+### Archivos revisados :
+* `Semana7/include/BST.h`
+* `Semana7/include/BinarySearchTree.h`
+* `Semana7/demos/demo_compare_with_semana5.cpp`
+* `Semana7/demos/demo_bst_deng_vs_avl.cpp`
+
+**1. Define formalmente la propiedad BST.**
+Un Árbol Binario de Búsqueda (BST) cumple con un invariante fundamental: para cualquier nodo \(N\), todos los valores en su subárbol izquierdo son estrictamente menores (o iguales, según la implementación) que el valor de \(N\), y todos los valores en su subárbol derecho son estrictamente mayores que el valor de \(N\).
+
+**2. Explica por qué el recorrido inorder de un BST produce una secuencia ordenada.**
+El recorrido `inorder` visita los nodos en el orden: Subárbol Izquierdo \(\rightarrow\) Nodo Actual \(\rightarrow\) Subárbol Derecho. Gracias a la propiedad BST, esto garantiza que siempre se visite primero a todos los elementos menores, luego al elemento intermedio, y finalmente a los mayores. Al aplicarse de forma recursiva, el resultado es una lectura secuencial de menor a mayor.
+
+**3. Explica por qué insertar claves ordenadas puede producir un BST degenerado.**
+Si se insertan datos que ya están ordenados (de forma ascendente o descendente), cada nuevo nodo será siempre mayor (o siempre menor) que el anterior. Esto provoca que todos los nodos se inserten como hijos derechos (o izquierdos) de forma consecutiva, dejando el otro lado del árbol completamente vacío. La estructura deja de ser un árbol bidimensional y se convierte esencialmente en una lista enlazada.
+
+**4. Construye manualmente el BST resultante de insertar: 10, 20, 30, 40, 50, 60, 70.**
+Al insertar la secuencia ordenada, el resultado es una degeneración lineal hacia la derecha:
+
+```text
+10
+  \
+   20
+     \
+      30
+        \
+         40
+           \
+            50
+              \
+               60
+                 \
+                  70
+```
+
+**5. Indica la altura del árbol anterior si no hay balanceo.**
+Asumiendo que la raíz (10) se encuentra en el nivel 0, la altura de este árbol es de **6** (tiene 6 aristas desde la raíz hasta la hoja más profunda).
+
+**6. Explica por qué una búsqueda en ese árbol puede costar $O(n)$ (Explicación del costo).**
+En un BST, el costo de las operaciones de búsqueda depende directamente de la altura del árbol. Como en este caso el árbol degeneró en una estructura lineal (su altura es igual a $n-1$), buscar un elemento que está al final (como el 70) o uno que no existe requerirá recorrer secuencialmente todos los $n$ nodos. Por lo tanto, el costo de búsqueda, en el peor de los casos, deja de ser logarítmico y pasa a ser lineal: $O(n)$.
+
+**7. Explica qué problema intenta resolver AVL.**
+El árbol AVL resuelve la degeneración lineal imponiendo un invariante de balance por altura. Garantiza que la diferencia de alturas entre el subárbol izquierdo y derecho de cualquier nodo sea como máximo 1. Para mantener esta evidencia, utiliza rotaciones tras cada inserción o eliminación, asegurando de forma estricta que la altura del árbol se mantenga en $O(\log n)$ y las búsquedas sean eficientes.
+
+**8. Explica qué problema intenta resolver Red-Black Tree.**
+Al igual que el AVL, busca evitar la degeneración lineal y garantizar búsquedas en $O(\log n)$, pero utilizando un invariante de balance por colores (nodos rojos o negros) y una serie de reglas matemáticas sobre los caminos hacia las hojas nulas. Su balanceo es un poco menos estricto que el AVL (el camino más largo no supera el doble del más corto), lo que a menudo resulta en menos rotaciones al insertar o eliminar, favoreciendo escenarios con muchas modificaciones.
+
+**9. Relación con la Semana 5.**
+La Semana 7 es una extensión directa de la Semana 5. El código de la Semana 5 (`BinarySearchTree.h`) establece la base funcional del BST (búsqueda, inserción, invariante de orden). La Semana 7 reutiliza esa misma interfaz y concepto central, pero añade clases derivadas (AVL, RedBlackTree) que incorporan las rotaciones y los invariantes estructurales que estaban ausentes en la Semana 5, demostrando cómo evolucionar un árbol simple hacia una estructura capaz de auto-balancearse.
+
 
 ## Bloque 5 - Red-Black Tree: balance por colores
 
