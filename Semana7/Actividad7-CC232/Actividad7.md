@@ -476,3 +476,85 @@ Si el sistema me pide defender lo anterior y los datos se modifican rara vez (le
 1. **Semana 5 (BST):** Definió cómo funcionan los nodos, el ordenamiento (`inorder`) y la regla de búsqueda, dejando vulnerable el árbol ante datos ordenados.
 
 2. **Semana 6 (Treap):** Introdujo la idea de **añadir un invariante extra** (propiedad de Heap con prioridades aleatorias) y usar **rotaciones** (`rotateLeft`, `rotateRight`) para mantenerlo, solucionando la degeneración de la Semana 5 de forma estadística.
+
+## Bloque 7 - Pruebas, invariantes y defensa oral
+
+### Archivos revisados:
+* `Semana7/pruebas_publicas/test_public_week7.cpp`
+* `Semana7/pruebas_internas/test_internal_week7.cpp`
+
+### Tabla de pruebas revisadas
+
+| Tipo de Prueba | Estructura | Operaciones Validadas | Propósito principal |
+| :--- | :--- | :--- | :--- |
+| **Pública** | AVL | Inserción manual, rotaciones estáticas (LL, LR), eliminación simple, verificación de altura constante y recorrido `inorder`. | Validar los casos base y el correcto funcionamiento de las rotaciones aisladas (desbalance simple). |
+| **Pública** | Red-Black Tree | Inserción manual, rechazo de duplicados, eliminación simple, verificación de reglas de color e `inorder`. | Validar la lógica base de recoloreo y el mantenimiento de las propiedades frente a operaciones triviales. |
+| **Interna** | Todas (BST, AVL, RBT) | Inserción masiva pseudoaleatoria (250 items), validación cruzada usando un oráculo (`std::set`), eliminación masiva en orden aleatorio (120 items), límites (`lowerBound`, `upperBound`). | *Stress testing* (pruebas de estrés). Garantizar que las estructuras no colapsan ni rompen sus invariantes bajo secuencias largas e impredecibles de operaciones combinadas. |
+
+### Preguntas
+
+**1. ¿Qué operaciones valida la prueba pública para AVL?**
+
+Se enfoca en los casos base. Comprueba que las inserciones fuercen bien las rotaciones (por ejemplo, meter `30, 20, 10` para probar el caso LL o `30, 10, 20` para LR). También verifica que las alturas se actualicen bien (`height() == 1`), que funcione el borrado de un nodo intermedio y que, al final de todo, el recorrido `inorder` siga saliendo ordenado.
+
+**2. ¿Qué operaciones valida la prueba pública para Red-Black Tree?**
+
+Revisa que se puedan insertar y eliminar nodos correctamente, y algo bien importante: confirma que rechace elementos duplicados (`!rb.add(22)`). Todo esto mientras llama a cada rato a `verifyRB()` o `isRedBlackTree()` para asegurarse de que no se rompan las reglas de los colores.
+
+**3. ¿Qué casos adicionales cubre la prueba interna?**
+
+Básicamente hace pruebas de estrés. Usa números aleatorios para insertar masivamente 250 elementos y los compara con un `std::set` (que sirve como oráculo/respuesta correcta). Luego borra unos 120 elementos en desorden para ver si el árbol soporta el castigo sin romperse. También pone a prueba métodos de búsqueda un poco más avanzados como `lowerBound` y `upperBound`.
+
+**4. ¿Qué significa que una prueba valide el inorder?**
+
+Quiere decir que el árbol no ha perdido su naturaleza de Árbol Binario de Búsqueda (su invariante BST). Si sacas el `inorder` y te da la secuencia perfectamente ordenada, es la prueba matemática de que, sin importar cuántas rotaciones se hicieron, los menores siguen a la izquierda y los mayores a la derecha.
+
+**5. ¿Qué significa que una prueba valide alturas o factores de balance?**
+
+Significa que estamos comprobando el invariante principal del AVL. Confirma que la diferencia de alturas entre la rama izquierda y derecha de absolutamente todos los nodos se mantenga en el rango permitido ($-1, 0, 1$). Si esto se cumple en todos lados, las rotaciones hicieron su trabajo.
+
+**6. ¿Qué significa que una prueba valide colores?**
+
+Es la forma de asegurar el invariante del Red-Black Tree. Verifica las reglas de oro de la estructura: que la raíz sea negra, que de casualidad no hayan quedado dos nodos rojos juntos (padre e hijo), y que si cuentas los nodos negros en cualquier camino hacia una hoja, la suma sea siempre la misma.
+
+**7. ¿Qué no demuestra pasar solo las pruebas públicas?**
+
+Pasar solo las pruebas públicas es como probar el código en el "camino feliz". Cubren casos muy puntuales y aislados. Lo que NO demuestran es si el árbol va a resistir cuando le metes miles de datos al azar y desencadenas un montón de rotaciones y recoloreos en cascada (eso solo lo ves con pruebas de estrés).
+
+**8. ¿Qué evidencia usarías en una sustentación: demostración, prueba, trazado o argumento de complejidad?**
+
+Lo mejor es usar una mezcla de todas. Arrancaría con el argumento de complejidad para dar la teoría (explicar por qué buscamos $O(\log n)$). 
+Luego haría un trazado manual para demostrar que entiendo cómo se mueven los punteros internamente. 
+Finalmente, mostraría las pruebas de código para confirmar que la teoría funciona en la práctica.
+
+**9. ¿Qué invariante revisarías primero si falla AVL?**
+
+Lo primero que miraría es la **actualización de las alturas** (la función `updateHeight`). Si un nodo calcula mal su altura y no lo propaga bien hacia la raíz, el factor de balance va a estar mal. Eso hace que el árbol no rote cuando debería, o rote cuando no hace falta.
+
+**10. ¿Qué invariante revisarías primero si falla Red-Black Tree?**
+
+Para la inserción, de frente revisaría la regla de **no tener dos nodos rojos consecutivos**, que es lo que más suele fallar y es lo que activa las rotaciones. Si el error salta al eliminar, entonces revisaría la conservación de la **altura negra**, porque manejar el caso del "doble negro" de reemplazo es lo más complejo de cuadrar.
+
+### Lista de invariantes que defenderías
+
+1. **El Invariante BST (de búsqueda):** $x \to \text{left} < x < x \to \text{right}$. Es la base de todo. La función `connect34` se encarga de mantener esto intacto al reestructurar los nodos.
+
+2. **El Invariante estricto del AVL:** $|\text{stature}(x \to \text{left}) - \text{stature}(x \to \text{right})| \le 1$. Se recupera con rotaciones en $O(1)$ al insertar, y en el peor de los casos toma $O(\log n)$ propagarlo al eliminar.
+
+3. **El Invariante relajado del Red-Black:** No tener rojos pegados y que la altura negra sea homogénea. Se defiende explicando que esta estructura prefiere cambiar colores (más barato) antes que mover punteros (rotar), lo que la hace mejor en escrituras masivas.
+
+### Evidencia de ejecución de ctest
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ctest --test-dir build-debug -C Debug -R semana7 --output-on-failure
+Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+    Start 24: semana7_public
+1/2 Test #24: semana7_public ...................   Passed    0.21 sec
+    Start 25: semana7_internal
+2/2 Test #25: semana7_internal .................   Passed    0.29 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.51 sec
+```
