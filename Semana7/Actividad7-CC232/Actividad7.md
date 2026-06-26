@@ -981,3 +981,40 @@ Una demostración imprime textos en la consola para que un humano lo lea y entie
 Que el inorder esté ordenado solo prueba que el árbol sirve para buscar (correctitud funcional). Pero ¡ojo!, una simple lista enlazada también tiene un inorder perfecto y es malísima en rendimiento.
 
 En AVL o Red-Black, tenemos que probar también la correctitud estructural (que la altura se mantenga pequeña). Las rotaciones pueden mantener el orden de los números sin problemas, pero fallar olímpicamente en el balanceo. Por eso es vital revisar los invariantes reales (factores de balance en AVL o reglas de colores en Red-Black). Sin probar eso, no sabes si tienes un árbol eficiente o solo un BST disfrazado.
+
+### Bloque 9 - Cierre comparativo
+
+¿Qué cambia cuando pasamos de un BST común a estructuras balanceadas como AVL y Red-Black Tree?
+
+| Aspecto | Lo que cambia y su impacto |
+| :--- | :--- |
+| **Degeneración del BST** | El BST común es vulnerable a datos pre-ordenados, degenerando en una lista enlazada con tiempos de $O(n)$. Las estructuras balanceadas eliminan este riesgo estructural. |
+| **Rotaciones e Inorder** | Pasamos a usar rotaciones mecánicas que modifican la topología del árbol para achicar su altura, pero preservando estrictamente la propiedad de búsqueda (el recorrido `inorder` se mantiene intacto). |
+| **Balance por altura (AVL)** | Introducimos un invariante matemático estricto: la diferencia de alturas reales entre las ramas izquierda y derecha de cualquier nodo jamás puede ser mayor a 1. |
+| **Balance por colores (RBT)** | En lugar de medir distancias físicas, usamos un proxy lógico (colores) que prohíbe tener dos nodos rojos consecutivos y fuerza a que todos los caminos tengan la misma "altura negra". |
+| **Estricto vs Flexible** | El AVL tiene un balance estricto (ideal para búsquedas intensivas), mientras que el Red-Black Tree tiene un balance flexible (tolera ramas hasta el doble de largas, ahorrando rotaciones en inserciones/eliminaciones masivas). |
+| **Costos garantizados** | Dejamos atrás la incertidumbre del peor caso. En AVL y RBT, los costos de búsqueda, inserción y eliminación están garantizados matemáticamente en $O(\log n)$. |
+| **Evolución (Semanas 5 y 6)** | Esto cierra la evolución del curso: la Semana 5 nos dio la búsqueda base (vulnerable), la Semana 6 nos dio balance probabilístico (Treap), y esta semana nos da balance determinista absoluto. |
+| **Evidencia de correctitud** | Para defender que estas estructuras funcionan, ya no basta con imprimir el `inorder`. Usamos una combinación de argumentos de complejidad, trazados manuales de rotaciones, invariantes estructurados (`verifyRB`, `isAVL`) y pruebas de estrés (`ctest`). |
+
+
+#### Autoevaluación breve
+
+* **Qué puedo defender con seguridad:** 
+
+El invariante fundamental de búsqueda (por qué el hijo izquierdo siempre es menor y el derecho mayor), cómo las rotaciones LL/RR/LR/RL solucionan los desbalances sin romper el `inorder`, y la diferencia principal de casos de uso entre AVL (lecturas) y Red-Black (escrituras masivas).
+
+* **Qué todavía confundo:**
+
+Trazar mentalmente los casos complejos de recoloreo del Red-Black Tree, especialmente manejar el "doble negro" durante la eliminación sin tener que dibujarlo paso a paso en papel.
+
+* **Qué evidencia usaría en una sustentación:** 
+
+Usaría: 
+1. Argumentos de complejidad teórica para justificar el $O(\log n)$
+2. Trazados en la pizarra para demostrar dominio mecánico de los punteros
+3. La salida de las pruebas de estrés masivas validadas contra el oráculo (`std::set`).
+
+* **Qué parte del código debo revisar otra vez:** 
+
+La función `removeFixup` del Red-Black Tree por la cantidad de casos que maneja, y la correcta propagación en `updateHeight` de la clase AVL.
