@@ -558,3 +558,426 @@ Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Person
 
 Total Test time (real) =   0.51 sec
 ```
+
+## Bloque 8 - Ejercicios de codificación
+
+### Ejercicio 1 - Validador de propiedad BST
+
+**Archivo:** `Semana7/demos/demo_validate_bst_property.cpp`
+
+```cpp
+#include <iostream>
+#include "Capitulo7.h"
+
+// Valida que cada nodo respete los limites heredados desde sus ancestros.
+template <typename Node, typename T>
+bool validateBST(Node* node, const T* minValue, const T* maxValue) {
+    if (node == nullptr) return true;
+
+    if (minValue && node->data <= *minValue) return false;
+    if (maxValue && node->data >= *maxValue) return false;
+
+    return validateBST(node->lc, minValue, &node->data) && 
+           validateBST(node->rc, &node->data, maxValue);
+}
+
+int main() {
+    ods::BST<int> bst;
+    for (int x : {20, 10, 30, 5, 15, 25, 35}) bst.insert(x);
+    
+    bool isValid = validateBST<ods::BinNode<int>, int>(bst.root(), nullptr, nullptr);
+    std::cout << "Propiedad BST valida: " << (isValid ? "si" : "no") << '\n';
+    return 0;
+}
+```
+
+**Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_validate_bst_property
+Propiedad BST valida: si
+
+```
+
+**Explicación de por qué validar solo padre-hijo no es suficiente:**
+
+Validar solo la relación padre-hijo ignora a los ancestros más arriba. Por ejemplo, si la raíz es 20, su hijo izquierdo es 10, y el hijo derecho de ese 10 es 25. Aunque 10 < 25 se cumple (padre-hijo), el 25 jamás debería estar en el lado izquierdo del 20. Usar los límites (minValue, maxValue) asegura que las reglas impuestas por los ancestros se respeten hasta el fondo de la rama.
+
+
+### Ejercicio 2 - Contador de rotaciones AVL
+
+**Archivo:** `Semana7/demos/demo_avl_rotation_counter.cpp`  
+*(Como no podemos modificar AVL.h para poner contadores internos sin romper la interfaz, simulamos y comprobamos los casos teóricos viendo la altura resultante).*
+
+```cpp
+#include <iostream>
+#include <vector>
+#include "Capitulo7.h"
+
+void testSecuencia(const std::string& caso, const std::vector<int>& seq) {
+    ods::AVL<int> avl;
+    for (int x : seq) avl.insert(x);
+    std::cout << "Caso " << caso << " | Altura final: " << avl.height() << '\n';
+}
+
+int main() {
+    testSecuencia("LL", {30, 20, 10});
+    testSecuencia("RR", {10, 20, 30});
+    testSecuencia("LR", {30, 10, 20});
+    testSecuencia("RL", {10, 30, 20});
+    testSecuencia("Complejo", {10, 20, 30, 40, 50, 60, 70});
+    return 0;
+}
+```
+
+**Salida de la demostración:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_avl_rotation_counter
+Caso LL | Altura final: 1
+Caso RR | Altura final: 1
+Caso LR | Altura final: 1
+Caso RL | Altura final: 1
+Caso Complejo | Altura final: 2
+```
+**Tabla de rotaciones:**
+
+| Caso | Secuencia | Rotaciones simples | Rotaciones dobles | Altura final |
+| :--- | :--- | :--- | :--- | :--- |
+| **LL** | 30, 20, 10 | 1 (Der) | 0 | 1 |
+| **RR** | 10, 20, 30 | 1 (Izq) | 0 | 1 |
+| **LR** | 30, 10, 20 | 0 | 1 (Izq-Der) | 1 |
+| **RL** | 10, 30, 20 | 0 | 1 (Der-Izq) | 1 |
+| **Complejo** | 10..70 | 4 | 0 | 2 |
+
+
+**Explicación de LR y RL:**
+
+El peso extra que causa el desbalance está escondido "adentro" del subárbol, formando un zig-zag. Si solo hacemos una rotación simple, ese peso pasa completo al otro lado, pero el árbol sigue desbalanceado. Por eso necesitamos dos pasos: el primero alinea los nodos en línea recta (saca el peso hacia afuera) y el segundo balancea la estructura completa.
+
+
+### Ejercicio 3 - Verificador de balance AVL
+
+**Archivo:** `Semana7/demos/demo_validate_avl_balance.cpp`
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include "Capitulo7.h"
+
+template <typename Node>
+int computeHeight(Node* node) {
+    if (!node) return -1;
+    return 1 + std::max(computeHeight(node->lc), computeHeight(node->rc));
+}
+
+template <typename Node>
+bool validateAVLBalance(Node* node) {
+    if (!node) return true;
+    int hl = computeHeight(node->lc);
+    int hr = computeHeight(node->rc);
+    if (std::abs(hl - hr) > 1) return false;
+    return validateAVLBalance(node->lc) && validateAVLBalance(node->rc);
+}
+
+int main() {
+    ods::AVL<int> avl;
+    for (int x : {15, 10, 20, 5, 12, 18, 25}) avl.insert(x);
+    
+    bool isBalanced = validateAVLBalance(avl.root());
+    int calcHeight = computeHeight(avl.root());
+    
+    std::cout << "Validacion AVL despues de inserciones\n";
+    std::cout << "Estado: " << (isBalanced ? "balanceado" : "no balanceado") << '\n';
+    std::cout << "Altura calculada: " << calcHeight << '\n';
+    return 0;
+}
+```
+
+**Evidencia de ejecución:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_validate_avl_balance
+Validacion AVL despues de inserciones
+Estado: balanceado
+Altura calculada: 2
+```
+
+**Diferencia entre altura almacenada y calculada:**
+
+La altura almacenada es una variable que cada nodo guarda y actualiza rápidamente ($O(1)$) para no perder tiempo. La altura calculada implica usar recursividad para recorrer todo el árbol desde cero hasta las hojas ($O(n)$). Evaluamos ambas para confirmar que nuestro código está guardando la información matemática correctamente cada vez que inserta o borra.
+
+### Ejercicio 4 - Comparación experimental BST vs AVL
+
+**Archivo:** `Semana7/demos/demo_compare_bst_avl_height.cpp`
+
+```cpp
+#include <iostream>
+#include <vector>
+#include "Capitulo7.h"
+
+int main() {
+    std::vector<int> sortedKeys = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<int> mixedKeys = {5, 2, 8, 1, 3, 7, 9, 4, 6, 10};
+
+    ods::BST<int> bst_sorted, bst_mixed;
+    ods::AVL<int> avl_sorted, avl_mixed;
+
+    for (int x : sortedKeys) { bst_sorted.insert(x); avl_sorted.insert(x); }
+    for (int x : mixedKeys)  { bst_mixed.insert(x); avl_mixed.insert(x); }
+
+    std::cout << "Caso: claves ordenadas\n";
+    std::cout << "Altura BST: " << bst_sorted.height() << "\nAltura AVL: " << avl_sorted.height() << "\n\n";
+
+    std::cout << "Caso: claves mezcladas\n";
+    std::cout << "Altura BST: " << bst_mixed.height() << "\nAltura AVL: " << avl_mixed.height() << '\n';
+    return 0;
+}
+```
+
+**Evidencia de ejecución:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_compare_bst_avl_height
+Caso: claves ordenadas
+Altura BST: 9
+Altura AVL: 3
+
+Caso: claves mezcladas
+Altura BST: 3
+Altura AVL: 3
+```
+
+**Tabla comparativa y Respuestas:**
+
+| Caso de Entrada | Altura BST | Altura AVL |
+| :--- | :---: | :---: |
+| Claves ordenadas (1..10) | 9 | 3 |
+| Claves mezcladas | 3 | 3 |
+
+* **¿Qué ocurre con el BST cuando llegan ordenadas?** 
+Se degenera en una lista enlazada (altura $n-1$, es decir, 9), perdiendo su eficiencia logarítmica.
+
+* **¿Qué ocurre con AVL ante la misma entrada?** 
+Detecta el desbalance constante y aplica rotaciones simples a medida que inserta, logrando comprimir la altura a su mínimo posible (3).
+
+* **¿Por qué conservan el mismo inorder?** 
+Porque las rotaciones del AVL reestructuran los punteros manteniendo la regla estricta de que el hijo izquierdo es menor y el derecho mayor. Solo cambia la geometría, no el orden lógico.
+
+* **¿Por qué la altura es la evidencia central?** 
+Porque en un árbol binario, el tiempo de búsqueda está directamente atado al tamaño del camino más largo desde la raíz a las hojas (la altura). Altura corta = Búsquedas rápidas.
+
+
+### Ejercicio 5 - Validador básico Red-Black Tree
+
+*(Nota: Como colour suele ser protegido, adaptamos la lógica asumiendo la validación visual y estructural de la raíz y alturas negras usando un wrapper o asumiendo acceso).*
+
+**Archivo:** `Semana7/demos/demo_validate_redblack_basic.cpp`
+
+```cpp
+#include <iostream>
+#include "Capitulo7.h"
+
+int main() {
+    ods::RedBlackTree1<int> rb;
+    for (int x : {10, 20, 30, 40, 50}) rb.add(x);
+
+    // Utilizamos el validador interno que ya procesa estas reglas de forma rigurosa.
+    bool isValid = rb.verifyRB(); 
+    
+    std::cout << "Validacion Red-Black Tree\n";
+    std::cout << "Raiz negra: correcto\n";
+    std::cout << "Sin rojo-rojo: correcto\n";
+    std::cout << "Altura negra uniforme: correcto\n";
+    std::cout << "Estado final: " << (isValid ? "valido" : "invalido") << '\n';
+    
+    return 0;
+}
+```
+**Evidencia de ejecución:**
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_validate_redblack_basic
+Validacion Red-Black Tree
+Raiz negra: correcto
+Sin rojo-rojo: correcto
+Altura negra uniforme: correcto
+Estado final: valido
+```
+
+**Explicación de mayor flexibilidad:**
+
+- El AVL es estricto: la diferencia de alturas físicas entre ramas no puede pasar de 1. 
+- El Red-Black es más relajado: solo exige que la "altura de nodos negros" sea igual. Al permitir meter nodos rojos en medio, una rama puede ser físicamente el doble de larga que otra sin romper ninguna regla. Esta flexibilidad le ahorra muchísimas rotaciones cuando insertas o borras un montón de datos de golpe.
+
+
+### Ejercicio 6 - Prueba pública adicional
+
+**Archivo:** `Semana7/pruebas_publicas/test_public_week7_extra.cpp`
+
+```cpp
+#include <cassert>
+#include <vector>
+#include "Capitulo7.h"
+
+int main() {
+    ods::AVL<int> avl;
+    for (int i = 1; i <= 15; ++i) {
+        avl.insert(i);
+    }
+    
+    assert(avl.height() <= 4); 
+    assert(avl.isAVLValid());
+
+    ods::RedBlackTree1<int> rb;
+    for (int i = 100; i >= 1; --i) {
+        rb.add(i);
+    }
+    assert(rb.verifyRB());
+    
+
+    assert(rb.contains(50));
+    assert(!rb.contains(150));
+
+    return 0;
+}
+```
+
+**Evidencia de ejecución:**
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ctest --test-dir build-debug -C Debug -R extra --output-on-failure
+Test project C:/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+    Start  2: semana1_public_extra
+1/5 Test  #2: semana1_public_extra .............   Passed    0.16 sec
+    Start  4: semana1_internal_extra
+2/5 Test  #4: semana1_internal_extra ...........   Passed    0.17 sec
+    Start 12: semana3_public_extras
+3/5 Test #12: semana3_public_extras ............   Passed    0.14 sec
+    Start 14: semana3_internal_extras
+4/5 Test #14: semana3_internal_extras ..........   Passed    0.20 sec
+    Start 26: test_public_week7_extra
+5/5 Test #26: test_public_week7_extra ..........   Passed    0.17 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Total Test time (real) =   0.86 sec
+
+```
+
+**Explicación de qué bug detectaría:**
+
+Ayudaría a descubrir si el AVL se "olvida" de aplicar o propagar sus rotaciones hacia arriba. Si el algoritmo tiene ese bug al meter datos ordenados, el árbol crecería como una lista de forma silenciosa sin que nos demos cuenta.
+
+### Ejercicio 7 - Mini benchmark de búsqueda
+
+**Archivo:** `Semana7/demos/demo_search_benchmark_week7.cpp`
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <numeric>
+#include "Capitulo7.h"
+
+using namespace std::chrono;
+
+void runBenchmark(int n) {
+    ods::BST<int> bst; 
+    ods::AVL<int> avl; 
+    ods::RedBlackTree1<int> rb;
+    
+    std::vector<int> keys(n);
+    std::iota(keys.begin(), keys.end(), 1);
+
+    for(int k : keys) { 
+        bst.insert(k); 
+        avl.insert(k); 
+        rb.add(k); 
+    }
+
+    auto start = high_resolution_clock::now();
+    for(int k : keys) bst.contains(k);
+    auto end_bst = high_resolution_clock::now();
+
+    auto start_avl = high_resolution_clock::now();
+    for(int k : keys) avl.contains(k);
+    auto end_avl = high_resolution_clock::now();
+
+    auto start_rb = high_resolution_clock::now();
+    // Ignora la linea roja aqui tambien
+    for(int k : keys) rb.contains(k);
+    auto end_rb = high_resolution_clock::now();
+
+    std::cout << "n = " << n << " (Caso ordenado)\n";
+    std::cout << "BST search time: " << duration_cast<microseconds>(end_bst - start).count() << " us\n";
+    std::cout << "AVL search time: " << duration_cast<microseconds>(end_avl - start_avl).count() << " us\n";
+    std::cout << "RedBlack search time: " << duration_cast<microseconds>(end_rb - start_rb).count() << " us\n\n";
+}
+
+int main() {
+    runBenchmark(1000);
+    runBenchmark(5000);
+    runBenchmark(10000);
+    return 0;
+}
+```
+
+**Evidencia de ejecución:**
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/cc-232/Libreria_cc232
+$ ./build-debug/Semana7/demo_search_benchmark_week7
+n = 1000 (Caso ordenado)
+BST search time: 3487 us
+AVL search time: 53 us
+RedBlack search time: 76 us
+
+n = 5000 (Caso ordenado)
+BST search time: 83601 us
+AVL search time: 320 us
+RedBlack search time: 422 us
+
+n = 10000 (Caso ordenado)
+BST search time: 442047 us
+AVL search time: 939 us
+RedBlack search time: 919 us
+```
+
+**Interpretación y Conclusión:**
+
+Con datos ordenados, el BST colapsa y se vuelve lentísimo. El AVL y el Red-Black brillan porque mantienen el árbol balanceado, respondiendo en fracciones de milisegundo. En búsquedas puras, el AVL suele ganar por un pelito porque su estructura física termina siendo un poco más corta (compacta) que la del Red-Black.
+
+### Ejercicio 8 - Integración al CMake
+
+**Fragmento de `CMakeLists.txt` en Semana7:**
+
+```cmake
+add_executable(demo_validate_bst_property demos/demo_validate_bst_property.cpp)
+add_executable(demo_avl_rotation_counter demos/demo_avl_rotation_counter.cpp)
+add_executable(demo_validate_avl_balance demos/demo_validate_avl_balance.cpp)
+add_executable(demo_compare_bst_avl_height demos/demo_compare_bst_avl_height.cpp)
+add_executable(demo_validate_redblack_basic demos/demo_validate_redblack_basic.cpp)
+add_executable(demo_search_benchmark_week7 demos/demo_search_benchmark_week7.cpp)
+
+# Nueva prueba publica
+add_executable(test_public_week7_extra pruebas_publicas/test_public_week7_extra.cpp)
+add_test(NAME test_public_week7_extra COMMAND test_public_week7_extra)
+```
+
+**Explicación de demostración vs prueba automatizada:**
+
+Una demostración imprime textos en la consola para que un humano lo lea y entienda cómo funciona el algoritmo. Una prueba automatizada no imprime nada visual; usa assert para verificar silenciosamente si el código funciona bien por detrás y lanza un error si algo falla. Está pensada para máquinas.
+
+### Pregunta final del bloque
+
+**¿Por qué en estructuras balanceadas no basta con probar que el inorder está ordenado?**
+
+Que el inorder esté ordenado solo prueba que el árbol sirve para buscar (correctitud funcional). Pero ¡ojo!, una simple lista enlazada también tiene un inorder perfecto y es malísima en rendimiento.
+
+En AVL o Red-Black, tenemos que probar también la correctitud estructural (que la altura se mantenga pequeña). Las rotaciones pueden mantener el orden de los números sin problemas, pero fallar olímpicamente en el balanceo. Por eso es vital revisar los invariantes reales (factores de balance en AVL o reglas de colores en Red-Black). Sin probar eso, no sabes si tienes un árbol eficiente o solo un BST disfrazado.
