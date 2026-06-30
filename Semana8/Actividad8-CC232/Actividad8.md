@@ -459,4 +459,91 @@ Debe ejecutarse cuando el `occupiedFactor()` supera el umbral límite crítico c
 
 Tiene un costo de **$O(k)$**, donde $k$ es el tamaño total del bloque o clúster de elementos contiguos adyacentes. Al no encontrar la clave, la búsqueda lineal está obligada a inspeccionar cada celda del clúster hasta tocar el primer slot `Empty` en los bordes de la aglomeración.
 
+## Bloque 6 - HashtableOA como diccionario `key value`
+
+### Archivos revisados :
+
+* `Semana8/include/Dictionary.h`
+* `Semana8/include/Entry.h`
+* `Semana8/include/HashtableOA.h`
+* `Semana8/include/Applications.h`
+* `Semana8/demos/demo_hashtable_oa.cpp`
+
+### Salida de `demo_hashtable_oa.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_hashtable_oa
+HashtableOA como Diccionario
+put(hash, 1) -> true
+put(tree, 2) -> true
+put(graph, 3) -> true
+get(hash) -> 1
+remove(tree) -> true
+get(tree) -> nullopt
+size=2 capacity=11 activeLoad=0.181818 occupiedLoad=0.272727 tombstones=1
+```
+
+### Tabla de operaciones de `HashtableOA` (N = 11)
+
+| Operación | Clave | Resultado esperado | Evidencia observada / Estado |
+| :---: | :---: | :---: | :---: |
+| **put** | "hash" | Inserta un nuevo par clave-valor. | true, la tabla almacena hash $\rightarrow$ 1. |
+| **put** | "tree" | Inserta un nuevo par clave-valor. | true, size se incrementa a 2. |
+| **put** | "graph" | Inserta un nuevo par clave-valor. | true, activeLoad sube a 0.181818. |
+| **get** | "hash" | Devuelve el valor asociado (1). | Imprime exitosamente hash $\rightarrow$ 1. |
+| **remove** | "tree" | Elimina clave existente dejando una lápida. | true, size vuelve a 2 y tombstones=1. |
+| **get** | "tree" | Devuelve vacío al estar eliminado. | Retorna `std::nullopt` por el rastro del tombstone. |
+
+### Aplicación Práctica: Conteo de frecuencias (string $\rightarrow$ int)
+
+El TDA Diccionario es la estructura óptima para el mapeo y conteo de frecuencias de palabras.
+
+* **Cadena de Entrada:** `"Hash hash TREE, tree hashing."`
+* **Mecanismo de Normalización:** Se procesa cada palabra a través de `normalizeToken`, el cual remueve signos de puntuación y convierte caracteres a minúsculas. Las cadenas resultantes se reducen a los tokens: `"hash"`, `"hash"`, `"tree"`, `"tree"`, `"hashing"`.
+* **Proceso de Conteo:** Se itera el texto alimentando la estructura mediante consultas directas con `get(k)`. Si la clave no se encuentra (`std::nullopt`), se inicializa con `put(token, 1)`. Si ya existe, se lee el valor, se incrementa y se vuelve a insertar.
+* **Resultado Esperado en el Diccionario:**
+  * `"hash"` $\rightarrow$ 2
+  * `"tree"` $\rightarrow$ 2
+  * `"hashing"` $\rightarrow$ 1
+
+### Rediseño del Algoritmo: Actualización en `put`
+
+En la implementación actual analizada en `HashtableOA.h`, si una clave ya existe, el método `put` rechaza la operación y retorna `false`. Si deseamos modificar el diseño para que `put` actualice el valor de una clave ya existente, el flujo algorítmico debe cambiar de la siguiente manera:
+
+1. **Fase de Inspección (Sondeo):** Al calcular el hash e iniciar la secuencia de sondeo, el algoritmo no debe detenerse inmediatamente al encontrar una coincidencia de claves para rechazarla.
+2. **Reemplazo de Carga Útil:** Si durante la exploración el slot inspeccionado está en estado `Filled` y la clave almacenada coincide exactamente con la clave del argumento (`entry.key == k`), en lugar de abortar, el código debe sobreescribir el campo de valor antiguo con el nuevo argumento `V`.
+3. **Control de Retorno:** La operación no incrementará el tamaño de la tabla (`size`), omitirá la búsqueda de celdas eliminadas previas y retornará `true` (o el valor antiguo que fue reemplazado, según la convención de la API).
+
+### Preguntas
+
+**1. ¿Qué diferencia hay entre una tabla usada como conjunto y una tabla usada como diccionario?**
+
+Un conjunto (`Set`) almacena única y estrictamente claves independientes para verificar su existencia o membresía; un diccionario (`Map`) almacena pares ordenados compuestos por una clave de indexación y un valor de carga útil asociado.
+
+**2. ¿Qué representa una clave?**
+
+La clave representa el identificador único e invariable de una entrada, utilizado por la función hash para determinar la posición de almacenamiento y realizar búsquedas aceleradas.
+
+**3. ¿Qué representa un valor?**
+
+El valor representa la información o atributos satelitales asociados a una clave específica. La estructura no busca mediante los valores, solo los transporta.
+
+**4. ¿Qué debe devolver get(k) si la clave existe?**
+
+Debe devolver el valor asociado a dicha clave. En la interfaz moderna de `HashtableOA`, se devuelve un contenedor seguro `std::optional<V>` mapeando el valor interno.
+
+**5. ¿Qué debe ocurrir con remove(k) si la clave no existe?**
+
+Debe retornar un indicador booleano `false` (o un estado inválido) y garantizar que la estructura física de la tabla, sus contadores de carga y sus lápidas permanezcan completamente inalterados.
+
+**6. ¿Qué política usa la implementación cuando se intenta insertar una clave repetida?**
+
+La política nativa del archivo analizado rechaza la inserción de claves duplicadas, manteniendo el valor original intacto y retornando `false` en la ejecución de `put`.
+
+**7. ¿Por qué una interfaz put, get, remove permite separar el uso del diccionario de su implementación interna?**
+
+Porque actúa como un contrato abstracto (TDA). Al usuario del diccionario solo le interesan los comportamientos lógicos de inserción, consulta y borrado. Esto permite que el motor interno pueda cambiarse de un sistema de encadenamiento (`Chaining`) a uno de direccionamiento abierto (`Linear/Quadratic Probing` o `Robin Hood`) sin alterar una sola línea de código de las aplicaciones que consumen la estructura.
+
+* **Alineación con el diseño:** Esta abstracción corresponde estrictamente al modelo del TDA Diccionario de la literatura clásica (como el enfoque de Deng): `put` inserta de manera directa, `get` evalúa o consulta y `remove` purga elementos de forma controlada.
 
