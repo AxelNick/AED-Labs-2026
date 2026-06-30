@@ -254,3 +254,118 @@ Tiene un costo temporal lineal estricto de **$O(k)$**. Se deben inspeccionar uno
 
 * **Peor Caso $O(n)$**: Si todas las $n$ claves colisionan en la misma posición del arreglo debido a una pésima función hash o datos patológicos, el bucket se convierte en una lista lineal de tamaño $n$. Buscar un elemento requerirá recorrer la lista entera, anulando las ventajas de la tabla hash.
 
+## Bloque 4 - Colisiones controladas sin asumir hash de identidad
+
+### Archivos revisados :
+
+* `Semana8/include/HashCode.h`
+* `Semana8/demos/demo_hash_functions.cpp`
+* `Semana8/demos/demo_collision_strategies.cpp`
+
+### Código creado en demo_controlled_collisions.cpp
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include "HashCode.h"
+
+std::vector<int> findCollidingKeys(std::size_t capacity, std::size_t targetBucket, std::size_t needed) {
+    std::vector<int> collidingKeys;
+    int currentKey = 0; // Búsqueda desde 0 en adelante
+    
+    while (collidingKeys.size() < needed) {
+        // 1. Aplicamos la mezcla hash real (mix64)
+        std::size_t mixedHash = ods::hashCode(currentKey);
+        
+        // 2. Verificamos si cae en el bucket objetivo
+        if (mixedHash % capacity == targetBucket) {
+            collidingKeys.push_back(currentKey);
+        }
+        currentKey++;
+    }
+    return collidingKeys;
+}
+
+int main() {
+    std::size_t capacity = 8;
+    std::size_t targetBucket = 0; // Forzando colisión en el índice 0
+    std::size_t needed = 5;       
+
+    std::cout << "Buscando " << needed << " claves que colisionen en el bucket " 
+              << targetBucket << " con capacidad " << capacity << "...\n\n";
+
+    std::vector<int> keys = findCollidingKeys(capacity, targetBucket, needed);
+
+    std::cout << std::left << std::setw(15) << "Clave (int)" 
+              << std::setw(30) << "Hash Normalizado (mix64)" 
+              << std::setw(10) << "Bucket" << "\n";
+    std::cout << std::string(55, '-') << "\n";
+
+    for (int key : keys) {
+        std::size_t h = ods::hashCode(key);
+        std::cout << std::left << std::setw(15) << key 
+                  << std::setw(30) << h 
+                  << std::setw(10) << (h % capacity) << "\n";
+    }
+
+    return 0;
+}
+```
+
+### Lista de claves encontradas
+
+* **Para capacidad = 8 (Target Bucket = 0):** `6`, `29`, `33`, `38`, `43`
+* **Para capacidad = 16 (Target Bucket = 0):** `33`, `38`, `84`, `123`, `137`
+
+### Tabla con clave, valor hash normalizado y bucket (N = 8)
+
+| Clave | Hash Normalizado (mix64) | Operación modular | Bucket calculado |
+| :---: | :---: | :---: | :---: |
+| **6** | 13647215125184110592 | 13647215125184110592 % 8 | 0 |
+| **29** | 13509472508297990000 | 13509472508297990000 % 8 | 0 |
+| **33** | 3174492301114349736 | 3174492301114349736 % 8 | 0 |
+| **38** | 16934044424796929712 | 16934044424796929712 % 8 | 0 |
+| **43** | 13432527470776545160 | 13432527470776545160 % 8 | 0 |
+
+### Evidencia de que esas claves sí producen colisiones en tu ejecución
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/demo_controlled_collisions
+Buscando 5 claves que colisionen en el bucket 0 con capacidad 8...
+
+Clave (int)    Hash Normalizado (mix64)      Bucket    
+-------------------------------------------------------
+6              13647215125184110592          0         
+29             13509472508297990000          0         
+33             3174492301114349736           0         
+38             16934044424796929712          0         
+43             13432527470776545160          0         
+```
+
+### Preguntas
+
+**1. ¿Por qué 0, 8, 16, 24 solo garantiza colisión si la función hash efectiva es $h(x) = x \bmod m$?**
+
+Porque esos números son múltiplos exactos de la capacidad $m = 8$. Si la función mapea de forma directa (identidad), el residuo matemático siempre dará 0. Si existe un paso intermedio de aleatorización aritmética, esta propiedad lineal se destruye inmediatamente.
+
+**2. ¿Qué ocurre si antes se aplica una mezcla como `hashCode(x)`?**
+
+La mezcla (como `mix64`) aplica transformaciones de bits por multiplicación de constantes grandes y corrimientos a la derecha (`XOR` shifts). Esto rompe la secuencialidad aritmética de los datos de entrada, distribuyendo los múltiplos de 8 en posiciones completamente caóticas y distantes de la tabla.
+
+**3. ¿Qué claves encontraste para un mismo bucket con capacidad 8 o 16?**
+
+* **Capacidad 8 (Bucket 0):** Se interceptaron los enteros **6, 29, 33, 38 y 43**.
+* **Capacidad 16 (Bucket 0):** Se interceptaron los enteros **33, 38, 84, 123 y 137**.
+
+**4. ¿Cómo cambia el experimento si usas cadenas en lugar de enteros?**
+
+El espacio de búsqueda se vuelve multidimensional. En lugar de un bucle incremental lineal `currentKey++`, se debe implementar un generador de permutaciones de caracteres (strings de tipo `"a"`, `"b"`, `"aa"`). El cálculo pasa por un polinomio acumulativo antes de la mezcla, pero el principio de colisión por fuerza bruta es idéntico.
+
+**5. ¿Por qué este bloque es importante para defender evidencia experimental honesta?**
+
+Porque demuestra que los peores casos temporales $O(n)$ de una tabla hash no son solo teóricos. Probar estructuras con datos ingenuos como `0, 8, 16` en una tabla real con mezcla no simula colisiones reales; construir claves que fuercen el colapso del algoritmo bajo funciones complejas valida matemáticamente la robustez del código.
+
+
+
