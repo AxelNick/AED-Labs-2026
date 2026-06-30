@@ -547,3 +547,79 @@ Porque actúa como un contrato abstracto (TDA). Al usuario del diccionario solo 
 
 * **Alineación con el diseño:** Esta abstracción corresponde estrictamente al modelo del TDA Diccionario de la literatura clásica (como el enfoque de Deng): `put` inserta de manera directa, `get` evalúa o consulta y `remove` purga elementos de forma controlada.
 
+## Bloque 7 - Comparación de estrategias de colisión
+
+### Archivos revisados :
+
+* `Semana8/include/ChainedHashTable.h`
+* `Semana8/include/LinearHashTable.h`
+* `Semana8/include/QuadraticHashTable.h`
+* `Semana8/include/DoubleHashTable.h`
+* `Semana8/include/RobinHoodHashTable.h`
+* `Semana8/demos/demo_collision_strategies.cpp`
+
+### Salida de `demo_collision_strategies.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_collision_strategies
+chained:   load=0.56338 longestBucket=2 stats={insertions=40, successfulSearches=0, failedSearches=0, collisions=15, totalProbes=58, maxProbeLength=4, averageProbeLength=1.45, rehashes=3, tombstones=0}
+linear:    load=0.3125 occupied=0.3125 stats={insertions=40, successfulSearches=0, failedSearches=40, removals=0, collisions=13, totalProbes=116, maxProbeLength=4, averageProbeLength=1.45, rehashes=2, tombstones=0}
+quadratic: load=0.412371 occupied=0.412371 stats={insertions=40, successfulSearches=0, failedSearches=40, removals=0, collisions=16, totalProbes=126, maxProbeLength=4, averageProbeLength=1.575, rehashes=3, tombstones=0}
+double:    load=0.412371 occupied=0.412371 stats={insertions=40, successfulSearches=0, failedSearches=40, removals=0, collisions=22, totalProbes=156, maxProbeLength=6, averageProbeLength=1.95, rehashes=3, tombstones=0}
+robinhood: load=0.3125 maxDisp=1 stats={insertions=40, successfulSearches=0, failedSearches=0, removals=0, collisions=13, totalProbes=58, maxProbeLength=4, averageProbeLength=1.45, rehashes=2, tombstones=0}
+```
+
+### Tabla Comparativa Completa
+
+| Estrategia | Representación interna | Cómo resuelve colisiones | Métrica más sensible | Ventaja | Debilidad | Costo esperado | Peor caso |
+| :--- | :--- | :--- | :---: | :--- | :--- | :---: | :---: |
+| **Chaining** | Arreglo de buckets de listas enlazadas. | Inserta en la lista dinámica externa del bucket. | `longestBucket()` | Fácil de implementar, tolera carga alta sin colapsar. | Uso adicional de memoria (punteros) y saltos en RAM. | $O(1)$ | $O(n)$ si un bucket crece masivamente. |
+| **Linear probing** | Arreglo contiguo lineal con estado de celdas. | Busca el siguiente slot libre de 1 en 1. | `maxProbeLength` | Cache-friendly, aritmética muy simple. | Clustering primario severo. | $O(1)$ | $O(n)$ con carga alta/clusters. |
+| **Quadratic probing** | Arreglo contiguo. | Sondeo con saltos cuadráticos ($i^2$). | `maxProbeLength` | Mitiga el clustering primario de manera económica. | Clustering secundario. Falla si $m$ no es primo. | $O(1)$ | $O(n)$ si tabla está llena. |
+| **Double hashing** | Arreglo contiguo. | Salta según el cálculo de una segunda función $h_2(x)$. | `maxProbeLength` | La mejor dispersión en familias clásicas. Sin clusters. | Mayor costo de CPU por calcular dos hashes. | $O(1)$ | $O(n)$ si tabla casi llena. |
+| **Robin Hood** | Arreglo con celdas que rastrean distancia. | Intercambia elementos evaluando la pobreza (distancia). | `maxDisplacement` | Balancea drásticamente las distancias de búsqueda. | Lógica de inserción mucho más compleja y lenta. | $O(1)$ | $O(n)$ si tabla llena. |
+
+### Respuestas de Análisis Teórico
+
+**1. ¿Qué es clustering primario?**
+
+Es la formación y fusión de bloques contiguos de slots ocupados dentro del arreglo, creando largas cadenas de colisiones que ralentizan las operaciones.
+
+**2. ¿Por qué linear probing tiende a formar bloques contiguos?**
+
+Porque ante cada colisión, la clave se asienta exactamente en el siguiente slot adyacente libre. Cualquier clave nueva que hashee dentro o cerca de ese bloque se verá obligada a caminar hasta el final del mismo, expandiéndolo y empeorando el problema como una bola de nieve.
+
+**3. ¿Qué intenta mejorar quadratic probing?**
+
+Intenta disolver el clustering primario. Al dar saltos no lineales ($+1, +4, +9$), logra escapar rápidamente de un bloque congestionado en lugar de expandirlo.
+
+**4. ¿Qué intenta mejorar double hashing?**
+
+Intenta resolver tanto el clustering primario como el secundario. Al asignar un tamaño de salto personalizado basado en la propia clave ($h_2(x)$), garantiza que dos elementos que colisionen en el mismo índice inicial sigan trayectorias de rebote completamente distintas.
+
+**5. ¿Qué intenta equilibrar Robin Hood hashing?**
+
+Intenta equilibrar la longitud máxima de búsqueda (`maxProbeLength` o desplazamiento) de todos los elementos. Logra una justicia de distribución al permitir que un elemento lejano a su hash original le quite la silla a un elemento que encontró asiento rápidamente.
+
+**6. ¿Por qué chaining y open addressing no tienen el mismo comportamiento ante carga alta?**
+
+Porque Chaining crece de manera ortogonal hacia afuera del arreglo (usando memoria dinámica infinita), permitiendo factores de carga $\lambda > 1.0$. En contraste, Open Addressing está confinado a un espacio físico estricto; a medida que la carga se acerca al 100%, la escasez de slots libres multiplica los choques y paraliza el sistema operativo.
+
+**7. ¿Qué estrategia elegirías para una tabla pequeña de laboratorio?**
+
+Elegiría `ChainedHashTable` por su tolerancia a errores de distribución, simplicidad de implementación y la ventaja de un borrado físico limpio sin necesidad de administrar tombstones.
+
+**8. ¿Qué estrategia elegirías para una carga alta con muchas búsquedas?**
+
+Elegiría `DoubleHashTable` o `RobinHoodHashTable`. Ambas garantizan que el límite superior de búsquedas (`maxProbeLength`) se mantenga corto y predecible, evitando tiempos de respuesta erráticos bajo estrés.
+
+**9. ¿Qué estrategia se degrada más claramente en presencia de muchas eliminaciones?**
+
+Linear Probing. Su alta tendencia a formar agrupaciones se convierte en un riesgo leal: al eliminar datos se dejan largas cadenas de tombstones, forzando a las búsquedas futuras a recorrer extensas zonas de "memoria sucia" antes de encontrar la clave o detenerse, destruyendo la eficiencia $O(1)$.
+
+### Conclusión Técnica
+
+La elección de una estrategia de colisión exige balancear la arquitectura de memoria y la tolerancia a varianzas operativas. Chaining provee estabilidad extrema en escenarios de carga intensa y eliminaciones frecuentes al externalizar los datos, pero sacrifica la localidad de caché. Las técnicas de Open Addressing maximizan la velocidad en CPU por acceso contiguo en RAM, pero exigen una gestión rigurosa del `occupiedFactor`. 
+
+Dentro de estas, Linear Probing es vulnerable al clustering y la degradación por tombstones, mientras que Double Hashing ofrece dispersión matemática óptima. Finalmente, Robin Hood representa un avance algorítmico al redistribuir la "pobreza" de las distancias, garantizando tiempos de búsqueda excepcionalmente estables (`maxProbeLength` mínimo) y permitiendo esquivar la dependencia crónica de las lápidas de borrado lógico.
