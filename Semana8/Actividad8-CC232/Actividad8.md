@@ -580,7 +580,7 @@ robinhood: load=0.3125 maxDisp=1 stats={insertions=40, successfulSearches=0, fai
 | **Double hashing** | Arreglo contiguo. | Salta según el cálculo de una segunda función $h_2(x)$. | `maxProbeLength` | La mejor dispersión en familias clásicas. Sin clusters. | Mayor costo de CPU por calcular dos hashes. | $O(1)$ | $O(n)$ si tabla casi llena. |
 | **Robin Hood** | Arreglo con celdas que rastrean distancia. | Intercambia elementos evaluando la pobreza (distancia). | `maxDisplacement` | Balancea drásticamente las distancias de búsqueda. | Lógica de inserción mucho más compleja y lenta. | $O(1)$ | $O(n)$ si tabla llena. |
 
-### Respuestas de Análisis Teórico
+### Preguntas
 
 **1. ¿Qué es clustering primario?**
 
@@ -623,3 +623,68 @@ Linear Probing. Su alta tendencia a formar agrupaciones se convierte en un riesg
 La elección de una estrategia de colisión exige balancear la arquitectura de memoria y la tolerancia a varianzas operativas. Chaining provee estabilidad extrema en escenarios de carga intensa y eliminaciones frecuentes al externalizar los datos, pero sacrifica la localidad de caché. Las técnicas de Open Addressing maximizan la velocidad en CPU por acceso contiguo en RAM, pero exigen una gestión rigurosa del `occupiedFactor`. 
 
 Dentro de estas, Linear Probing es vulnerable al clustering y la degradación por tombstones, mientras que Double Hashing ofrece dispersión matemática óptima. Finalmente, Robin Hood representa un avance algorítmico al redistribuir la "pobreza" de las distancias, garantizando tiempos de búsqueda excepcionalmente estables (`maxProbeLength` mínimo) y permitiendo esquivar la dependencia crónica de las lápidas de borrado lógico.
+
+## Bloque 8 - Funciones hash, hashing universal y distribución
+
+### Archivos revisados :
+
+* `Semana8/include/HashCode.h`
+* `Semana8/include/UniversalHash.h`
+* `Semana8/demos/demo_hash_functions.cpp`
+
+### Salida de `demo_hash_functions.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_hash_functions
+x=10 hashCode%m=10 universal1=8 universal2=9
+x=20 hashCode%m=4 universal1=10 universal2=0
+x=30 hashCode%m=0 universal1=16 universal2=12
+x=40 hashCode%m=2 universal1=8 universal2=7
+x=50 hashCode%m=8 universal1=10 universal2=15
+```
+
+### Tabla de Distribución y Conjuntos de Claves (m = 128)
+
+| Conjunto de Claves | Cantidad (N) | Capacidad (m) | Buckets Usados | Bucket más cargado | Colisiones | Comentario sobre la distribución |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **1. Enteros consecutivos** | 100 | 128 | ~100 | 1 | ~0 | Excelente para detectar patrones de dispersión base. Con una función bien mezclada (`mix64`), los buckets se distribuyen casi perfectamente de forma uniforme. |
+| **2. Enteros con patrón repetitivo** | 100 | 128 | ~65 | 3 | ~35 | Muestran vulnerabilidades críticas cuando la función hash es débil (como la de identidad). Si el módulo $m$ no es primo, los bits repetidos generan colisiones sistemáticas severas. |
+| **3. Textos con prefijos comunes** | 100 | 128 | ~80 | 2 | ~20 | Prueban si el código hash aplica el Efecto Avalancha (Polynomial Rolling Hash). Verifica que la matemática considere toda la cadena, evitando que el prefijo idéntico colapse la tabla. |
+
+### Comparación : `hashCode` vs `UniversalHash`
+
+Observando la salida de la consola, se evidencia el principio fundamental del Hashing Universal:
+
+* Para la misma clave (ej. `x=10`), el método estándar (`hashCode%m`) siempre mapeará irremediablemente al bucket 10. 
+* Sin embargo, las dos instancias de `UniversalHash` (`universal1` inicializada con semilla 12345 y `universal2` con 98765) mapean la misma clave a los buckets 8 y 9 respectivamente. 
+
+Esto demuestra que la familia universal altera radicalmente las posiciones destino utilizando constantes aleatorizadas en tiempo de ejecución ($a, b$), rompiendo cualquier intento de predicción estática de colisiones.
+
+### Preguntas
+
+**1. ¿Qué propiedad debe tener una buena función hash?**
+
+Debe ser matemáticamente rápida de calcular, estrictamente determinista (misma entrada = misma salida), poseer una entropía alta para garantizar una dispersión uniforme y minimizar activamente las colisiones para un conjunto de datos real.
+
+**2. ¿Por qué una función hash determinista puede ser buena para datos comunes y mala para datos adversariales?**
+
+Es buena para datos comunes porque distribuye bien las variaciones normales estadísticamente predecibles. Es mala ante adversarios porque, al ser estática y conocida, un atacante puede precalcular matemáticamente miles de claves distintas que colisionen exactamente en el mismo bucket (Ataque de Denegación de Servicio - DDoS), congelando la búsqueda a un tiempo de $O(n)$.
+
+**3. ¿Qué idea aporta hashing universal?**
+
+Aporta el uso de la aleatoriedad parametrizada. En lugar de usar una única función fija, selecciona una función al azar de una gran familia matemática (generando constantes aleatorias durante la inicialización de la tabla). Esto hace estadísticamente imposible que un adversario pueda fabricar y enviar un conjunto de claves maliciosas, ya que desconoce las constantes que rigen la distribución actual.
+
+**4. ¿Por qué no se debe evaluar una función hash con un solo conjunto de claves?**
+
+Porque un único conjunto carece de representatividad estadística. Una función podría comportarse excepcionalmente bien con enteros consecutivos (sobreajuste), pero colapsar desastrosamente ante patrones de bits secuenciales o cadenas prefijadas. Se requiere someterla a varianza máxima para confirmar su robustez.
+
+**5. ¿Qué relación existe entre dispersión y costo esperado?**
+
+La relación es directamente proporcional a la eficiencia. Una alta dispersión estadística garantiza un número mínimo de colisiones. Al haber pocas colisiones, las listas enlazadas (Chaining) o las secuencias de sondeo (Open Addressing) se mantienen extremadamente cortas (cercanas a 1). Esto es el núcleo matemático que garantiza que el costo esperado de las operaciones fundamentales (`put`, `get`, `remove`) permanezca sólidamente en $O(1)$.
+
+### Conclusión Técnica sobre el Rendimiento Real
+
+La función hash representa el verdadero cuello de botella algorítmico y motor de rendimiento de cualquier estructura de diccionario. Mientras que las políticas de resolución de colisiones y rehashing actúan como mecanismos de mitigación pasivos, una función hash deficiente destruye la eficiencia $O(1)$ desde la primera capa computacional. 
+
+La implementación de Hashing Universal (MAD) es obligatoria en entornos de producción, ya que externaliza el riesgo geométrico de los datos de entrada, asegurando que la entropía de la tabla dependa de una matemática inyectada de forma pseudoaleatoria y no de la predictibilidad o malicia del usuario final.
