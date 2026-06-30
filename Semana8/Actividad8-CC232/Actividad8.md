@@ -367,5 +367,96 @@ El espacio de búsqueda se vuelve multidimensional. En lugar de un bucle increme
 
 Porque demuestra que los peores casos temporales $O(n)$ de una tabla hash no son solo teóricos. Probar estructuras con datos ingenuos como `0, 8, 16` en una tabla real con mezcla no simula colisiones reales; construir claves que fuercen el colapso del algoritmo bajo funciones complejas valida matemáticamente la robustez del código.
 
+## Bloque 5 - Linear probing: estados, sondeo y tombstones
+
+### Archivos revisados :
+
+* `Semana8/include/LinearHashTable.h`
+* `Semana8/include/Bitmap.h`
+* `Semana8/include/HashStats.h`
+* `Semana8/demos/demo_linear.cpp`
+* `Semana8/demos/demo_tombstones.cpp`
+
+### Salida de `demo_linear.cpp` y `demo_tombstones.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_linear
+LinearHashTable
+size=5 capacity=8 activeLoad=0.625 occupiedLoad=0.625 tombstones=0
+insertions=6, successfulSearches=1, failedSearches=6, removals=1, collisions=1, totalProbes=17, maxProbeLength=4, averageProbeLength=1.21429, rehashes=0, tombstones=0
+
+\$ ./Semana8/sem8_demo_tombstones
+Linear tombstones=4 activeLoad=0.125 occupiedLoad=0.1875
+HashtableOA tombstones=4 activeLoad=0.216216 occupiedLoad=0.324324
+```
+
+### Tabla de operaciones de `LinearHashTable` (N = 8)
+
+| Operación | Clave | Posición hash inicial | Secuencia de sondeo | Estado final de la celda | size | occupied | loadFactor() | occupiedFactor() | tombstoneCount() |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **add** | 7 | 7 | [7] | Filled | 1 | 1 | 0.1250 | 0.1250 | 0 |
+| **add** | 15 | 5 | [5] | Filled | 2 | 2 | 0.2500 | 0.2500 | 0 |
+| **add** | 23 | 6 | [6] | Filled | 3 | 3 | 0.3750 | 0.3750 | 0 |
+| **add** | 31 | 2 | [2] | Filled | 4 | 4 | 0.5000 | 0.5000 | 0 |
+| **add** | 39 | 4 | [4] | Filled | 5 | 5 | 0.6250 | 0.6250 | 0 |
+| **remove**| 23 | 6 | [6] | Deleted | 4 | 5 | 0.5000 | 0.6250 | 1 |
+| **add** | 47 | 5 | [5 -> 6] | Filled | 5 | 5 | 0.6250 | 0.6250 | 0 |
+
+### Trazado manual de operaciones críticas
+
+#### 1. Trazado manual de una búsqueda exitosa (Buscar `47`)
+* **Paso 1:** Se calcula el hash inicial `hashCode(47) % 8 = 5`.
+* **Paso 2:** Se inspecciona el slot `5`. Contiene la clave `15`. Colisión detectada, se continúa el sondeo lineal.
+* **Paso 3:** Se avanza al slot `6` mediante $(5+1) \bmod 8 = 6$.
+* **Paso 4:** Se inspecciona el slot `6`. Contiene la clave buscada `47`.
+* **Resultado:** Búsqueda exitosa. Secuencia de sondeo: `[5, 6]`. Estado final de la celda: `Filled`.
+
+#### 2. Trazado manual de una búsqueda fallida (Buscar `99`)
+* **Paso 1:** Se calcula el hash inicial simulado `hashCode(99) % 8 = 4`.
+* **Paso 2:** Se inspecciona el slot `4`. Contiene la clave `39`. Colisión detectada, continúa.
+* **Paso 3:** Se inspecciona el slot `5`. Contiene la clave `15`. Colisión detectada, continúa.
+* **Paso 4:** Se inspecciona el slot `6`. Contiene la clave `47`. Colisión detectada, continúa.
+* **Paso 5:** Se inspecciona el slot `7`. Contiene la clave `7`. Colisión detectada, continúa.
+* **Paso 6:** Se avanza al slot `0` mediante $(7+1) \bmod 8 = 0$.
+* **Paso 7:** Se inspecciona el slot `0`. Estado de la celda es `Empty`. La búsqueda se detiene.
+* **Resultado:** Búsqueda fallida. Secuencia de sondeo: `[4, 5, 6, 7, 0]`.
+
+### Explicación de la política de eliminación en Open Addressing
+
+El direccionamiento abierto exige una política estricta de borrado lógico basada en lápidas (`tombstones`) debido a la dependencia secuencial del sondeo. Si una clave eliminada simplemente restaurara el estado del slot a `Empty`, rompería la cadena de inspección lineal para cualquier elemento posterior que haya colisionado en ese mismo sector. Las búsquedas subsecuentes se detendrían prematuramente al encontrarse con dicho vacío fortuito, resultando en falsos negativos patológicos. Por ello, el estado `Deleted` mantiene artificialmente la continuidad de exploración sin almacenar carga útil activa.
+
+### Preguntas
+
+**1. ¿Qué representan los estados Empty, Filled y Deleted?**
+
+* **Empty:** Indica que el slot jamás ha contenido una clave o ha sido liberado de forma absoluta. Detiene inmediatamente cualquier secuencia de sondeo.
+* **Filled:** Representa un slot activo que aloja una clave válida. Produce colisión si la clave buscada es diferente.
+* **Deleted:** Actúa como una lápida (`tombstone`). Es un espacio lógicamente vacío que permite la sobreescritura en inserciones, pero se comporta como ocupado en búsquedas para no romper el flujo lineal.
+
+**2. ¿Por qué Deleted no puede tratarse igual que Empty?**
+
+Porque al tratar un slot `Deleted` como `Empty`, el algoritmo detendría prematuramente la exploración lineal de claves válidas que sufrieron colisiones previas y fueron almacenadas en posiciones posteriores dentro del mismo clúster.
+
+**3. ¿Qué diferencia hay entre size y occupied?**
+
+* **size:** Es el número neto de elementos activos vigentes presentes en la tabla.
+* **occupied:** Es la cantidad acumulada de slots no disponibles para detención de sondeo; contabiliza la suma de elementos activos (`size`) más las lápidas de elementos borrados (`tombstones`).
+
+**4. ¿Por qué loadFactor() y occupiedFactor() pueden divergir después de muchas eliminaciones?**
+
+Porque al eliminar elementos, `size` disminuye linealmente reduciendo el `loadFactor()`. Sin embargo, cada eliminación incrementa el número de tombstones, manteniendo intacto el valor de `occupied` y congelando o elevando el `occupiedFactor()`.
+
+**5. ¿Qué problema aparece si se acumulan demasiados tombstones?**
+
+Se genera una degradación severa en los tiempos de búsqueda fallida y exitosa. Los tombstones obligan al algoritmo a recorrer largas secuencias muertas de celdas antes de hallar la clave o un slot verdaderamente vacío (`Empty`), transformando el costo constante esperado en un recorrido secuencial costoso.
+
+**6. ¿Cuándo debe hacerse rehashing por carga ocupada aunque haya pocos elementos activos?**
+
+Debe ejecutarse cuando el `occupiedFactor()` supera el umbral límite crítico configurado (ej. `maxOccupiedLoad = 0.75`). Aunque haya pocos elementos activos, el clúster fantasma provocado por los tombstones destruye la eficiencia de la tabla, exigiendo una purga y reubicación total en un arreglo limpio.
+
+**7. ¿Qué costo tiene una búsqueda fallida cuando hay clustering?**
+
+Tiene un costo de **$O(k)$**, donde $k$ es el tamaño total del bloque o clúster de elementos contiguos adyacentes. Al no encontrar la clave, la búsqueda lineal está obligada a inspeccionar cada celda del clúster hasta tocar el primer slot `Empty` en los bordes de la aglomeración.
 
 
