@@ -688,3 +688,81 @@ La relación es directamente proporcional a la eficiencia. Una alta dispersión 
 La función hash representa el verdadero cuello de botella algorítmico y motor de rendimiento de cualquier estructura de diccionario. Mientras que las políticas de resolución de colisiones y rehashing actúan como mecanismos de mitigación pasivos, una función hash deficiente destruye la eficiencia $O(1)$ desde la primera capa computacional. 
 
 La implementación de Hashing Universal (MAD) es obligatoria en entornos de producción, ya que externaliza el riesgo geométrico de los datos de entrada, asegurando que la entropía de la tabla dependa de una matemática inyectada de forma pseudoaleatoria y no de la predictibilidad o malicia del usuario final.
+
+## Bloque 9 - Rehashing, política de carga y costo amortizado
+
+### Archivos revisados :
+
+* `Semana8/include/RehashPolicy.h`
+* `Semana8/include/HashStats.h`
+* `Semana8/demos/demo_benchmark_load_factor.cpp`
+* `Semana8/pruebas_internas/test_rehashing.cpp`
+
+### Salida de `demo_benchmark_load_factor.cpp`
+
+Al ejecutar el benchmark con diferentes políticas de carga máxima (`maxLoad`), se evidencia el impacto directo en el rendimiento y las colisiones:
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_benchmark_load_factor
+maxLoad=0.45 capacity=18431 load=0.27128 maxProbe=6 avgProbe=1.04 time_us=1850
+maxLoad=0.65 capacity=9215 load=0.54259 maxProbe=18 avgProbe=1.21 time_us=2150
+maxLoad=0.85 capacity=9215 load=0.54259 maxProbe=84 avgProbe=2.15 time_us=3120
+```
+*(Nota: Aunque la capacidad final para 0.65 y 0.85 pueda ser la misma al llegar a 5000 elementos, la tabla con 0.85 permitió mucha más densidad antes del último salto, incrementando notablemente el promedio de sondeos histórico).*
+
+### Tabla comparativa de Factor de Carga y Sondeos (N = 5000)
+
+| maxLoad | Capacidad Final | Elementos (N) | Factor de Carga Final | Rehashes | Máximo de Sondeos (maxProbe) | Impacto en Rendimiento |
+| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **0.45** | 18431 | 5000 | ~0.2711 | Bajo (~5) | 6 | Excelente velocidad, mínimas colisiones, pero desperdicia ~73% de memoria. |
+| **0.65** | 9215 | 5000 | ~0.5410 | Medio (~10) | 18 | Buen equilibrio entre consumo de memoria y resolución de colisiones. |
+| **0.85** | 9215 | 5000 | ~0.5410 | Alto (~10) | 84+ | Demora las expansiones permitiendo mucha densidad. Genera clusters primarios masivos antes de crecer, degradando el tiempo de inserción/búsqueda. |
+
+### Explicación del Costo Amortizado $O(1)$
+
+Aunque redimensionar la tabla (`rehash`) es una operación costosa de tiempo lineal **$O(n)$**, la inserción mantiene un costo amortizado de **$O(1)$** debido a su baja frecuencia de ocurrencia. 
+
+Dado un `growthFactor` de 2.0, después de una expansión costosa, la tabla duplica su tamaño. Esto garantiza que se podrán realizar al menos $n$ inserciones baratas de costo constante $O(1)$ antes de provocar un nuevo rehash. Si sumamos el costo de esas $n$ inserciones inmediatas ($n \times 1$) más el costo del rehash cíclico ($n$), el costo total acumulado para $n$ operaciones es de $2n$. Al promediar este costo total entre la cantidad de operaciones ejecutadas ($2n / n$), el costo individual por operación resulta en una constante estadística fija: **$O(1)$**. El costo pesado se distribuye y diluye a lo largo del tiempo.
+
+### Interpretación de la prueba estructural `test_rehashing.cpp`
+
+La prueba `test_rehashing.cpp` actúa como una validación unitaria estructural automatizada:
+
+* **Estado Inicial:** Registra las capacidades base independientes ($c_0, l_0, m_0$) de tres implementaciones distintas de tablas (`ChainedHashTable`, `LinearHashTable`, `HashtableOA`) inicializadas con valores pequeños (8 y 11).
+* **Fase de Estrés:** Inserta de forma consecutiva 1000 elementos mediante un bucle cerrado. Dado que $1000 \gg 11$, es matemáticamente obligatorio que las tablas se saturen y superen su límite crítico de `maxLoad`.
+* **Mecanismo de Aserciones (`assert`):**
+  * `assert(c.capacity() > c0)`: Verifica que la estructura interna sea dinámica y haya solicitado exitosamente más memoria al sistema al saturarse.
+  * `assert(c.stats().rehashes > 0)`: Confirma que no solo creció el arreglo, sino que la lógica de re-dispersión se ejecutó correctamente y el integrador `HashStats` registró el evento.
+* **Conclusión de la prueba:** Garantiza que las tres familias de estructuras hash auto-gestionan su ciclo de vida de memoria de manera transparente, previniendo desbordamientos mediante expansiones controladas por la política.
+
+### Preguntas
+
+**1. ¿Qué condición de carga provoca crecimiento?**
+
+Ocurre cuando la proporción de elementos activos supera el límite establecido: $\text{active} / \text{capacity} > \text{maxLoad}$. Según la política, esto multiplicará la capacidad actual por el `growthFactor` (normalmente 2.0) en un nuevo arreglo limpio.
+
+**2. ¿Qué condición puede provocar limpieza por tombstones?**
+
+Ocurre cuando la proporción de ranuras no utilizables para detener el sondeo (elementos activos + tombstones) supera el `maxOccupiedLoad`. Esto desencadena un rehash que filtra las lápidas muertas y empaqueta solo los elementos activos, manteniendo la capacidad o creciendo si estos últimos también superan su propio umbral.
+
+**3. ¿Qué condición puede provocar contracción?**
+
+Ocurre tras operaciones continuas de eliminación, si la proporción de elementos activos cae por debajo del umbral mínimo: $\text{active} / \text{capacity} < \text{minLoad}$, siempre y cuando la capacidad actual sea estrictamente mayor al límite inferior `minCapacity` configurado para evitar encoger tablas vacías a cero.
+
+**4. ¿Por qué rehashing cuesta $O(n)$ en el momento en que ocurre?**
+
+Porque no se trata de una copia directa en memoria (`memcpy`). Implica asignar un nuevo bloque contiguo de tamaño distinto, iterar uno a uno sobre los $n$ elementos del arreglo antiguo, calcular nuevamente la operación modular de la función hash para cada clave ($\text{hash} \bmod \text{nueva\_capacidad}$) y reubicarlos en sus nuevas posiciones resueltas.
+
+**5. ¿Qué relación hay entre capacidad, factor de carga y número de sondeos?**
+
+Es una relación inversamente proporcional con respecto a la eficiencia. Si la capacidad es cercana al número de elementos (alto factor de carga), hay menos celdas libres disponibles. En direccionamiento abierto, esto agrava el agrupamiento primario, obligando al algoritmo a realizar extensas cadenas de saltos (sondeos) antes de hallar una celda vacía o resolver una búsqueda.
+
+**6. ¿Qué evidencia muestra HashStats sobre rehashings?**
+
+`HashStats` actúa como la telemetría métrica en tiempo real de la estructura de datos. Mediante contadores dedicados como `rehashes`, `collisions` y el seguimiento del peor caso temporal (`maxProbeLength`), evidencia de forma cuantitativa los puntos de saturación estructural y valida la efectividad matemática de las políticas de redimensionamiento.
+
+**7. ¿Qué riesgo hay si se permite que el factor de carga sea demasiado alto?**
+
+El riesgo latente es una degradación catastrófica del rendimiento. Si el factor de carga se aproxima a 1.0 en estrategias de direccionamiento abierto, las secuencias de sondeo cubren casi la totalidad de la tabla. Las inserciones y búsquedas pierden su naturaleza constante de $O(1)$ para transformarse en recorridos secuenciales costosos de **$O(n)$**, anulando el propósito de la estructura.
+
