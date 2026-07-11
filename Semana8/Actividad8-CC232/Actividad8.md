@@ -766,3 +766,86 @@ Es una relación inversamente proporcional con respecto a la eficiencia. Si la c
 
 El riesgo latente es una degradación catastrófica del rendimiento. Si el factor de carga se aproxima a 1.0 en estrategias de direccionamiento abierto, las secuencias de sondeo cubren casi la totalidad de la tabla. Las inserciones y búsquedas pierden su naturaleza constante de $O(1)$ para transformarse en recorridos secuenciales costosos de **$O(n)$**, anulando el propósito de la estructura.
 
+## Bloque 10 - Aplicaciones de hashing
+
+### Archivos revisados :
+
+* `Semana8/include/Applications.h`
+* `Semana8/demos/demo_aplicaciones.cpp`
+
+### Salida de `demo_aplicaciones.cpp`
+
+```bash
+AXEL@DESKTOP-70IITE7 UCRT64 /c/Users/AXEL/OneDrive/Escritorio/uni/2026-1/AED/Repositorio/Personal/CC232-sfinales/CC-232/Libreria_cc232/build-debug
+\$ ./Semana8/sem8_demo_aplicaciones
+duplicados=1
+primer repetido=7
+twoSum indices=0,1
+hash=2 tree=2
+```
+
+### Análisis Detallado de Aplicaciones 
+
+#### 1. Aplicación: `firstRepeated`
+Encuentra el primer elemento que vuelve a aparecer al recorrer un arreglo de izquierda a derecha.
+
+* **Trazado manual (Entrada: `v = [5, 2, 8, 2, 5]`):**
+  * **Paso 0 (Valor 5):** `contains(5)` $\rightarrow$ No. Operación `add(5)`. Estado de la tabla: `{ 5 }`.
+  * **Paso 1 (Valor 2):** `contains(2)` $\rightarrow$ No. Operación `add(2)`. Estado de la tabla: `{ 5, 2 }`.
+  * **Paso 2 (Valor 8):** `contains(8)` $\rightarrow$ No. Operación `add(8)`. Estado de la tabla: `{ 5, 2, 8 }`.
+  * **Paso 3 (Valor 2):** `contains(2)` $\rightarrow$ **Sí**. Se detiene el bucle y retorna `2`.
+  *(Nota: Aunque el 5 también se repite después, el 2 es el primero que el algoritmo detecta como duplicado).*
+
+* **Análisis de la aplicación:**
+  * **Problema de entrada:** Una lista de números enteros donde se busca identificar el primero que ya haya aparecido previamente.
+  * **Salida esperada:** El valor del número repetido encapsulado en un `std::optional`, o vacío si todos son únicos.
+  * **Estructura de la tabla:** Funciona como un conjunto (`Set`) que almacena estrictamente los valores del arreglo ya visitados.
+  * **Costo dominante:** Las consultas lógicas `contains(x)` y las inserciones `add(x)`.
+  * **¿Por qué el costo esperado es lineal?** El arreglo se recorre una sola vez (bucle de $n$ pasos). Como la búsqueda e inserción en la tabla hash toman tiempo constante promedio, el costo total es $n \times 1 = \mathbf{O(n)}$.
+  * **¿Qué caso podría degradar el rendimiento?** Un conjunto de datos patológicos que genere una tasa masiva de colisiones en la función hash, transformando el acceso de $O(1)$ en una búsqueda secuencial de $O(n)$, elevando el tiempo total a **$O(n^2)$**.
+
+#### 2. Aplicación: `twoSum`
+Encuentra dos números dentro de un arreglo que sumen exactamente un valor objetivo (`target`).
+
+* **Trazado manual (Entrada: `a = [3, 1, 5, 4]`, `target = 9`):**
+  * **Paso 0 ($i=0, a[i]=3$):** Necesita $9 - 3 = 6$. `get(6)` $\rightarrow$ Nulo. Operación `put(3, 0)`. Estado: `{ 3: 0 }`.
+  * **Paso 1 ($i=1, a[i]=1$):** Necesita $9 - 1 = 8$. `get(8)` $\rightarrow$ Nulo. Operación `put(1, 1)`. Estado: `{ 3: 0, 1: 1 }`.
+  * **Paso 2 ($i=2, a[i]=5$):** Necesita $9 - 5 = 4$. `get(4)` $\rightarrow$ Nulo. Operación `put(5, 2)`. Estado: `{ 3: 0, 1: 1, 5: 2 }`.
+  * **Paso 3 ($i=3, a[i]=4$):** Necesita $9 - 4 = 5$. `get(5)` $\rightarrow$ **Sí**, está en el índice `2`. Se detiene el algoritmo y retorna los índices `(2, 3)`.
+
+* **Análisis de la aplicación:**
+  * **Problema de entrada:** Un arreglo de enteros y un valor de suma objetivo.
+  * **Salida esperada:** Un par ordenado con los índices de los dos números que logran la suma exacta, o vacío si no existen.
+  * **Estructura de la tabla:** Un diccionario (`Map`) donde la clave es el número del arreglo y el valor es su índice original.
+  * **Costo dominante:** La búsqueda del complemento `get(need)` y la inserción del número actual `put(a[i], i)`.
+  * **¿Por qué el costo esperado es lineal?** Recorremos los $n$ elementos una sola vez. En cada iteración se ejecutan operaciones sobre la tabla que demoran tiempo constante promedio, resultando en un costo total lineal **$O(n)$**.
+  * **¿Qué caso podría degradar el rendimiento?** Múltiples expansiones consecutivas de la tabla (`rehashes`) por factores de carga límite mal configurados o colisiones concentradas en un solo clúster.
+
+#### 3. Aplicación: `frequencyCount` (Word Frequency)
+* **Estructura de la tabla:** Clave = la palabra ya normalizada (minúsculas, sin puntuación), Valor = el contador acumulativo de apariciones.
+* **Trazado manual (Texto: `"Hash hash TREE"`):**
+  * `"Hash"` $\rightarrow$ Se procesa a `"hash"`. No está en la tabla. Operación `put("hash", 1)`.
+  * `"hash"` $\rightarrow$ Ya está normalizado. Sí está en la tabla con valor $1$. Operación `put("hash", 2)`.
+  * `"TREE"` $\rightarrow$ Se procesa a `"tree"`. No está en la tabla. Operación `put("tree", 1)`.
+* **Costo dominante:** El cálculo aritmético del hash para cada string y la actualización de los pares en memoria (`get` / `put`).
+* **¿Por qué el costo esperado es lineal?** Se procesan las $n$ palabras del flujo secuencial exactamente una vez, resolviendo el acceso a la tabla en operaciones promedio de tiempo constante $O(1)$.
+
+### Comparación Estructural: Hashing vs Árboles Balanceados (AVL / Red-Black)
+
+Si resolviéramos estos mismos problemas utilizando una estructura de árbol balanceado (como `std::set` para `firstRepeated` o `std::map` para `twoSum`):
+
+* **Mecanismo de resolución:** En lugar de calcular posiciones de memoria mediante operaciones de aritmética modular, los datos se insertarían como nodos ramificados en el árbol. Para buscar si un número ya existe o si existe el complemento, el algoritmo navegaría por los punteros comparando jerárquicamente si la clave es menor (izquierda) o mayor (derecha) al nodo actual.
+
+| Criterio | Tabla Hash (`std::unordered_map` / `Set`) | Árbol Balanceado (`std::map` / `Set`) |
+| :--- | :--- | :--- |
+| **Mecanismo de Búsqueda** | Transforma la clave en un índice mediante aritmética modular directa. | Navega de forma ramificada por los nodos evaluando comparaciones (`<`, `>`). |
+| **Costo Temporal Esperado** | Constantemente óptimo: **$O(n)$** totales. | Logarítmico estable: **$O(n \log n)$** totales. |
+| **Garantía del Peor Caso** | Lineal degradado a **$O(n^2)$** si colapsan las colisiones o por rehashings. | Estricta y matemáticamente acotada a **$O(n \log n)$** ante cualquier estrés. |
+| **Preservación del Orden** | Caótico. Mezcla internamente las claves según los bits resultantes del hash. | Ordenado de forma natural de menor a mayor (Recorrido Inorden automático). |
+
+### Conclusiones de selección de estructuras
+
+* **Lo que se gana con Hashing:** Velocidad máxima y eficiencia de acceso en CPU. En la práctica, al procesar millones de registros, el tiempo lineal $O(n)$ de la tabla hash es abrumadoramente más rápido que el recorrido por punteros dispersos en memoria de un árbol balanceado.
+* **Lo que se pierde con Hashing:**
+  1. **La garantía estricta del peor caso:** Si el hash falla de forma catastrófica ante datos maliciosos, el sistema puede colgarse procesando a costo cuadrático $O(n^2)$, mientras que el árbol nunca sufre picos erráticos de tiempo.
+  2. **El ordenamiento:** Las tablas hash destruyen por completo cualquier noción de orden secuencial. Si se requiere imprimir las palabras en orden alfabético, la tabla hash exige volcar los datos y ordenarlos por separado agregando costo extra.
