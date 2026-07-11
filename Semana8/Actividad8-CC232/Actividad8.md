@@ -849,3 +849,106 @@ Si resolviéramos estos mismos problemas utilizando una estructura de árbol bal
 * **Lo que se pierde con Hashing:**
   1. **La garantía estricta del peor caso:** Si el hash falla de forma catastrófica ante datos maliciosos, el sistema puede colgarse procesando a costo cuadrático $O(n^2)$, mientras que el árbol nunca sufre picos erráticos de tiempo.
   2. **El ordenamiento:** Las tablas hash destruyen por completo cualquier noción de orden secuencial. Si se requiere imprimir las palabras en orden alfabético, la tabla hash exige volcar los datos y ordenarlos por separado agregando costo extra.
+
+## Bloque 11 - Modificación controlada de código
+
+He elegido la **Opción C - Caso adicional de aplicación**, implementando la función `findRepeatedWords` haciendo uso de la tabla `HashtableOA` propia de la biblioteca.
+
+### Fragmentos de código modificados
+
+#### Archivo: `Semana8/include/Applications.h`
+
+```cpp
+// código anterior 
+
+// MOD-A8: Opción C - Caso adicional de aplicación
+// Devuelve una lista de palabras que aparecen más de una vez en el texto
+inline std::vector<std::string> findRepeatedWords(const std::string& text) {
+    std::istringstream in(text);
+    std::vector<std::string> out;
+    HashtableOA<std::string, int> freq; 
+    std::string raw;
+
+    while (in >> raw) {
+        std::string word = normalizeToken(raw);
+        if (word.empty()) continue;
+
+        auto current = freq.get(word);
+        if (current) {
+            // Si el conteo era 1, es la primera vez que se repite; la guardamos
+            if (*current == 1) { 
+                out.push_back(word);
+            }
+            freq.remove(word);
+            freq.put(word, *current + 1);
+        } else {
+            freq.put(word, 1);
+        }
+    }
+    return out;
+}
+
+}  // namespace ods
+```
+
+#### Archivo: `Semana8/demos/demo_aplicaciones.cpp`
+
+```cpp
+#include <iostream>
+#include <vector>
+#include "Applications.h"
+
+int main() {
+    // codigo anterior de la demo 
+
+    // MOD-A8: Demo de Opción C
+    std::string text = "El hash es un hash rápido. Un árbol es un árbol.";
+    auto repetidas = ods::findRepeatedWords(text);
+    
+    std::cout << "Palabras repetidas en el texto: ";
+    for (const auto& w : repetidas) {
+        std::cout << "[" << w << "] ";
+    }
+    std::cout << "\n";
+    
+    return 0;
+}
+```
+
+### Evidencia de Compilación y Ejecución
+
+* **Compilación (Limpia):**
+```bash
+\$ g++ -std=c++17 -Wall -Wextra -I Semana8/include Semana8/demos/demo_aplicaciones.cpp -o build-debug/Semana8/sem8_demo_aplicaciones
+```
+
+* **Ejecución:**
+```bash
+\$ ./build-debug/Semana8/sem8_demo_aplicaciones
+duplicados=1
+primer repetido=7
+twoSum indices=0,1
+hash=2 tree=2
+Palabras repetidas en el texto: [hash] [un] [es] [arbol] 
+```
+
+### Preguntas
+
+**1. ¿Qué archivo modificaste?**
+Se modificaron `Semana8/include/Applications.h` (para agregar la lógica de la función) y `Semana8/demos/demo_aplicaciones.cpp` (para inyectar la prueba funcional).
+
+**2. ¿Qué función agregaste?**
+`std::vector<std::string> findRepeatedWords(const std::string& text)`
+
+**3. ¿Qué invariante debe mantenerse?**
+El invariante estructural de `HashtableOA` (factor de carga, direccionamiento abierto, tombstones) debe permanecer inalterado y opaco. La función consumidora no debe intentar manipular arreglos internos ni forzar rehashes; solo debe comunicarse mediante los métodos de la interfaz pública (`put`, `get`, `remove`).
+
+**4. ¿Qué prueba o demo evidencia el cambio?**
+Se inyectó en `demo_aplicaciones.cpp` un string de prueba con palabras duplicadas en distintas capitalizaciones y con signos de puntuación (*"El hash es un hash rápido. Un árbol es un árbol."*). La salida demuestra que el tokenizador normaliza correctamente y la tabla cuenta bien las repeticiones filtrando las únicas.
+
+**5. ¿Qué costo tiene la función agregada?**
+* **Costo de Tiempo:** $O(n)$ esperado, donde $n$ es la cantidad de palabras del texto. El ciclo `while` itera sobre todas las palabras, y en cada iteración las operaciones `get`, `remove` y `put` en la tabla hash se ejecutan en un tiempo constante $O(1)$ amortizado.
+* **Costo Espacial:** $O(u)$ donde $u$ es el número de palabras únicas (tamaño máximo de la tabla hash y el vector de salida).
+
+**6. ¿Por qué tu modificación no oculta el algoritmo central?**
+Porque la implementación no altera ni enmascara la mecánica del hashing. La modificación existe estrictamente en la capa de aplicación (cliente). La resolución de colisiones y el rehashing siguen ocurriendo de forma nativa e independiente dentro del motor central (`HashtableOA`), demostrando un bajo acoplamiento entre la estructura de datos y los problemas que resuelve.
