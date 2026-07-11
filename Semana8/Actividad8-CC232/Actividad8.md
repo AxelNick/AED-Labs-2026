@@ -952,3 +952,76 @@ Se inyectó en `demo_aplicaciones.cpp` un string de prueba con palabras duplicad
 
 **6. ¿Por qué tu modificación no oculta el algoritmo central?**
 Porque la implementación no altera ni enmascara la mecánica del hashing. La modificación existe estrictamente en la capa de aplicación (cliente). La resolución de colisiones y el rehashing siguen ocurriendo de forma nativa e independiente dentro del motor central (`HashtableOA`), demostrando un bajo acoplamiento entre la estructura de datos y los problemas que resuelve.
+
+## Bloque 12 - Comparación final con BST, AVL, Red-Black Tree y Treap
+
+### Archivos revisados :
+
+* `Semana5/include/BinarySearchTree.h`
+* `Semana6/include/Treap.h`
+* `Semana7/include/AVL.h`
+* `Semana7/include/RedBlackTree.h`
+* `Semana8/include/ChainedHashTable.h`
+* `Semana8/include/LinearHashTable.h`
+* `Semana8/include/HashtableOA.h`
+
+### 1. Matriz 
+
+| Estructura | Mantiene orden | Búsqueda (prom) | Búsqueda (peor) | Inserción / Elim. | Memoria adicional | Ventaja principal | Riesgo principal | Caso de uso recomendado |
+| :--- | :---: | :---: | :---: | :---: | :--- | :--- | :--- | :--- |
+| **BST Simple** | Sí | $O(\log n)$ | $O(n)$ | $O(\log n)$ | Media (2 punteros) | Fácil de implementar. | Degeneración a lista ligada ($O(n)$). | Prototipos; datos de entrada garantizados como aleatorios. |
+| **Treap** | Sí | $O(\log n)$ | $O(n)$\* | $O(\log n)$ | Alta (Punteros + Prioridad) | Soporta operaciones rápidas de split/merge. | Dependencia de la entropía del generador aleatorio. | Algoritmos que requieren partir/unir árboles frecuentemente. |
+| **AVL** | Sí | $O(\log n)$ | $O(\log n)$ | $O(\log n)$ | Media (Punteros + Altura) | Altura estrictamente balanceada, búsquedas óptimas. | Rotaciones muy frecuentes al insertar/eliminar. | Diccionarios ordenados de lectura intensiva (Read-heavy). |
+| **Red-Black Tree** | Sí | $O(\log n)$ | $O(\log n)$ | $O(\log n)$ | Baja (Punteros + 1 bit color) | Equilibrio ideal entre balanceo estructural y mutación. | Ligeramente más profundo que AVL (más saltos). | Uso general en memoria (`std::map`, `std::set`), sistemas Write-heavy. |
+| **ChainedHashTable** | No | $O(1)$ | $O(n)$ | $O(1)$ | Alta (Nodos de lista + Arreglo) | Soporta factores de carga altos sin degradarse drásticamente. | Mala localidad de caché (punteros dispersos). | Diccionarios sin orden, inserciones masivas impredecibles. |
+| **LinearHashTable** | No | $O(1)$ | $O(n)$ | $O(1)$ | Baja (Vectores contiguos) | Excelente localidad de caché (CPU prefetching). | Agrupamiento primario (Clustering) si se llena. | Tablas de alta velocidad con factor de carga controlado ($\lambda < 0.7$). |
+| **HashtableOA** | No | $O(1)$ | $O(n)$ | $O(1)$ | Media (Bitmaps + Arreglo) | Mitiga clustering al usar saltos (probing) más avanzados. | Complejidad de mantenimiento de Tombstones y números primos. | Tablas densas de alto rendimiento y uso eficiente de memoria RAM. |
+
+*\* El peor caso en Treap es $O(n)$ teóricamente, pero probabilísticamente casi imposible con un buen generador.*
+
+### 2. Preguntas
+
+**1. ¿Cuándo elegirías una tabla hash?**
+Cuando la métrica crítica es la velocidad pura de acceso por coincidencia exacta y no existe ninguna necesidad de mantener un orden lógico entre las claves.
+
+**2. ¿Cuándo elegirías AVL?**
+En sistemas de lectura intensiva donde los datos cambian poco una vez cargados, y se requiere buscar claves individuales y rangos con una garantía de tiempo logarítmico inquebrantable.
+
+**3. ¿Cuándo elegirías Red-Black Tree?**
+Como estructura por defecto para diccionarios ordenados. Es ideal para sistemas donde hay una mezcla equitativa de consultas, inserciones y eliminaciones, ya que sus reglas de coloreo exigen menos rotaciones que el AVL.
+
+**4. ¿Cuándo elegirías Treap?**
+En aplicaciones concurrentes o algoritmos geométricos donde la capacidad de dividir el árbol en dos (basado en un valor) o unir dos árboles contiguos deba hacerse extremadamente rápido ($O(\log n)$).
+
+**5. ¿Por qué una tabla hash no sirve directamente para consultas por rango?**
+Porque su objetivo fundamental (la función hash) es destruir la contigüidad. Toma valores cercanos (ej. 20 y 21) y los dispersa pseudoaleatoriamente a índices de memoria diametralmente opuestos para evitar colisiones.
+
+**6. ¿Por qué un árbol balanceado sí permite recorrer claves en orden?**
+Porque mantiene un "invariante de orden": en cualquier nodo, todo su subárbol izquierdo contiene elementos menores y su derecho mayores. Un recorrido recursivo (In-Order) visitará garantizadamente los datos de menor a mayor.
+
+**7. ¿Qué significa costo "esperado" vs costo "garantizado"?**
+* **Costo garantizado (Árboles AVL/RB):** Significa que la topología misma limita la ruta más larga matemáticamente a $\log_2(n)$; jamás tardará más.
+* **Costo esperado (Hash):** Es una apuesta estadística: asume que, gracias al hashing universal y el factor de carga bajo, la mayoría de operaciones son $O(1)$, pero acepta que un evento raro (colisiones masivas o rehashing) disparará temporalmente el tiempo a $O(n)$.
+
+**8. ¿Qué estructura preferirías para un índice de palabras sin orden?**
+Una Tabla Hash (`LinearHashTable` o `HashtableOA`). Nos ahorraremos el pesado mantenimiento de punteros de árbol y obtendremos tiempo de acceso casi instantáneo.
+
+**9. ¿Qué estructura preferirías para un ranking ordenado por clave?**
+Un `Red-Black Tree` o `AVL`. Permitirá insertar puntuaciones y extraer fácilmente el "Top 10" recorriendo los últimos nodos del árbol sin tener que reordenar toda la estructura.
+
+**10. ¿Qué estructura preferirías si necesitas lowerBound y upperBound?**
+Un `Red-Black Tree` o `AVL`. Estas operaciones (buscar el menor valor estrictamente mayor que $X$) son exclusivas de estructuras que mantienen un orden espacial. En un Hash, encontrar un vecino inmediato requeriría inspeccionar toda la tabla ($O(n)$).
+
+### 3. Ejemplos concretos de superioridad
+
+* **Un ejemplo concreto donde Hashing gana:**
+  Sistema de caché en memoria de sesiones de usuario. Si tenemos millones de tokens UUID, no nos interesa si el token A1 va antes que el token F9. Lo único crítico es verificar si el usuario está autenticado lo más cerca posible de $O(1)$. Un Red-Black Tree implicaría saltar por punteros por toda la RAM incurriendo en decenas de *cache misses*, mientras que una tabla hash (`LinearHashTable`) resolvería la consulta en una o dos lecturas contiguas de memoria.
+
+* **Un ejemplo concreto donde AVL o Red-Black Tree gana:**
+  Un sistema de agenda o reservas de hotel. Necesitamos consultar rápidamente *"muéstrame todas las reservas entre el 15 de marzo y el 20 de marzo"*. Con un árbol (AVL), encontramos la fecha inicial en $O(\log n)$ mediante un `lowerBound`, y simplemente avanzamos recorriendo los nodos consecutivos hasta pasar el 20 de marzo. Una tabla hash es completamente inútil para esto, obligándonos a escanear linealmente cada registro del hotel uno por uno.
+
+### 4. Conclusión Técnica Final
+
+La elección entre estructuras basadas en árboles y basadas en dispersión (*hashing*) representa el dilema más clásico de la ciencia de la computación: el compromiso entre el orden estricto y la velocidad bruta. Las tablas hash dominan indiscutiblemente los diccionarios sin orden, superando los límites logarítmicos para ofrecer accesos $O(1)$ amortizados, a costa de picos de latencia en los redimensionamientos y la pérdida total de la semántica relacional de los datos. 
+
+Por el contrario, la elegancia de árboles como el AVL y el Red-Black Tree radica en su estabilidad sistémica; aunque matemáticamente sean un poco más lentos ($O(\log n)$), ofrecen garantías de tiempo deterministas y preservan intacto el orden natural del dominio, permitiendo operaciones de rango imposibles en dispersión. No existe una "mejor" estructura universal; el ingeniero de software profesional no elige la más rápida en el papel, sino la que resuelve la morfología exacta de sus consultas reales sin introducir costos ocultos.
